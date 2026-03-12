@@ -208,6 +208,15 @@
             border:1px solid var(--blue-mid);padding:2px 7px;border-radius:20px;
         }
 
+        /* Case config indicator */
+        .case-dot {
+            display:inline-flex;align-items:center;gap:3px;
+            font-size:10px;font-weight:600;
+            background:var(--amber-lt);color:var(--amber);
+            border:1px solid #fde68a;padding:2px 6px;border-radius:20px;
+            margin-left:4px;
+        }
+
         /* Action buttons */
         .actions { display:flex;align-items:center;gap:6px;flex-wrap:nowrap; }
 
@@ -326,11 +335,6 @@
                 <h1 class="pg-title">Brands</h1>
                 <p class="pg-desc">Manage liquor brands, categories and size/pricing configurations.</p>
             </div>
-            <!--
-                Single entry point: goes straight to brand-create.html
-                which handles brand info + all sizes in one form.
-                The old separate "Sizes" page is no longer needed.
-            -->
             <a th:href="@{/admin/brands/create}" class="btn btn-p">
                 + Add New Brand
             </a>
@@ -357,7 +361,7 @@
                 <div class="stat-ico amber">📐</div>
                 <div>
                     <div class="stat-num"
-                         th:text="${brands.stream().mapToLong(b -> b.sizes.size()).sum()}">0</div>
+                         th:text="${#aggregates.sum(brands.![sizes.size()])}">0</div>
                     <div class="stat-lbl">Total SKUs</div>
                 </div>
             </div>
@@ -412,14 +416,17 @@
                     </thead>
                     <tbody id="tblBody">
                     <tr th:each="brand, stat : ${brands}"
-                        th:attr="data-name=${brand.name},
+                        th:attr="data-name=${brand.brandName},
                                  data-cat=${brand.category},
                                  data-status=${brand.active ? 'active' : 'inactive'}">
+                        <!-- FIX ↑ brand.name → brand.brandName (entity field name) -->
+
                         <td th:text="${stat.count}"
                             style="color:var(--txt4);font-size:12px;font-weight:600"></td>
 
                         <td>
-                            <div class="brand-name" th:text="${brand.name}"></div>
+                            <!-- FIX: brand.name → brand.brandName -->
+                            <div class="brand-name" th:text="${brand.brandName}"></div>
                             <div style="font-size:11px;color:var(--txt3);margin-top:2px"
                                  th:text="${brand.parentCompany != null && !brand.parentCompany.isEmpty()
                                             ? brand.parentCompany : ''}">
@@ -427,7 +434,11 @@
                         </td>
 
                         <td>
-                            <span class="cat-badge">
+                            <!--
+                                Guard against null category — brand can be saved without one
+                                (category is optional in the entity)
+                            -->
+                            <span class="cat-badge" th:if="${brand.category != null}">
                                 <span th:text="${brand.category.name()=='WHISKY' ?'🥃':
                                                 brand.category.name()=='BEER'   ?'🍺':
                                                 brand.category.name()=='VODKA'  ?'🍸':
@@ -439,11 +450,21 @@
                                 </span>
                                 <span th:text="${brand.category}"></span>
                             </span>
+                            <span class="cat-badge" th:if="${brand.category == null}"
+                                  style="color:var(--txt4)">—</span>
                         </td>
 
                         <td>
                             <span class="sz-pill"
                                   th:text="${brand.sizes.size() + ' size' + (brand.sizes.size() != 1 ? 's' : '')}">
+                            </span>
+                            <!--
+                                Show a small case indicator if any size has case pricing configured.
+                                Uses bottlesPerCase field added to BrandSize in our last update.
+                            -->
+                            <span class="case-dot"
+                                  th:if="${not #lists.isEmpty(brand.sizes.?[bottlesPerCase != null])}">
+                                📦 case
                             </span>
                         </td>
 
@@ -455,18 +476,10 @@
 
                         <td>
                             <div class="actions">
-                                <!--
-                                    Edit goes to brand-create.html in EDIT mode
-                                    (same single-page form, pre-populated with existing data)
-                                -->
                                 <a th:href="@{'/admin/brands/' + ${brand.id} + '/edit'}"
                                    class="btn btn-edit">
                                     ✏ Edit
                                 </a>
-
-                                <!--
-                                    Deactivate brand — confirm before submit
-                                -->
                                 <form th:action="@{'/admin/brands/' + ${brand.id} + '/delete'}"
                                       method="post"
                                       style="display:inline"
@@ -536,7 +549,6 @@
             `${visible} brand${visible !== 1 ? 's' : ''} shown`;
     }
 
-    // Init count
     filterTable();
 </script>
 </body>

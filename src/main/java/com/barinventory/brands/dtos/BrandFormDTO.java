@@ -6,7 +6,6 @@ import java.util.List;
 
 import com.barinventory.brands.entity.Brand;
 import com.barinventory.brands.entity.BrandSize;
-
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -17,7 +16,7 @@ public class BrandFormDTO {
 
     private Long id;
 
-    // ── REQUIRED — only these two must be present ─────────────
+    // ── REQUIRED ──────────────────────────────────────────────
     @NotBlank(message = "Brand code is required")
     @Size(max = 20, message = "Brand code max 20 characters")
     private String brandCode;
@@ -25,7 +24,7 @@ public class BrandFormDTO {
     @NotBlank(message = "Brand name is required")
     private String brandName;
 
-    // ── OPTIONAL — everything else ────────────────────────────
+    // ── OPTIONAL ──────────────────────────────────────────────
     private String parentCompany;
     private Brand.Category category;
     private Brand.SubCategory subCategory;
@@ -62,6 +61,14 @@ public class BrandFormDTO {
         private String barcode;
         private String hsnCode;
         private Integer displayOrder;
+
+        // ── CASE PURCHASING (new) ─────────────────────────────
+        // How many bottles come in one depot case for this size.
+        // e.g. 750ml=12, 375ml=24, 180ml=48, 90ml=96
+        private Integer bottlesPerCase;
+
+        // What the bar owner pays for one full case from the depot.
+        private BigDecimal casePrice;
 
         @Builder.Default
         private boolean active = true;

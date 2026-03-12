@@ -1,120 +1,686 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Manage Sizes</title>
+    <title th:text="'Sizes — ' + ${brand.brandName} + ' | BarInventory'">Manage Sizes</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --sb-w:    240px;
+            --tb-h:    56px;
+            --blue:    #3b6dea;
+            --blue-dk: #2a57cc;
+            --blue-lt: #eef2fd;
+            --blue-mid:#c7d4fa;
+            --green:   #16a34a;
+            --green-lt:#dcfce7;
+            --red:     #dc2626;
+            --red-lt:  #fee2e2;
+            --amber:   #d97706;
+            --amber-lt:#fef3c7;
+            --bg:      #f3f4f8;
+            --sur:     #ffffff;
+            --sur2:    #f9fafb;
+            --bdr:     #e5e7eb;
+            --bdr-dk:  #d1d5db;
+            --txt:     #111827;
+            --txt2:    #374151;
+            --txt3:    #6b7280;
+            --txt4:    #9ca3af;
+            --sb-bg:   #1e2433;
+            --r:       10px;
+            --r-sm:    6px;
+            --r-lg:    14px;
+        }
+
+        html { font-size: 14px; }
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            background: var(--bg); color: var(--txt); min-height: 100vh; display: flex;
+        }
+
+        /* ── SIDEBAR (same as brand-list) ─────────────────── */
+        .sb { width:var(--sb-w);background:var(--sb-bg);min-height:100vh;position:fixed;left:0;top:0;display:flex;flex-direction:column;z-index:100; }
+        .sb-logo { padding:0 20px;height:var(--tb-h);display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.06); }
+        .sb-ico  { width:30px;height:30px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px; }
+        .sb-name { font-size:13.5px;font-weight:700;color:#fff; }
+        .sb-tag  { font-size:9px;background:rgba(59,109,234,.3);color:#93b4f8;padding:1px 6px;border-radius:20px;font-weight:600;letter-spacing:.04em;margin-left:auto; }
+        .sb-nav  { flex:1;padding:12px 10px;overflow-y:auto; }
+        .sb-grp  { margin-bottom:20px; }
+        .sb-grp-lbl { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#475569;padding:0 10px 6px; }
+        .sb-lnk  { display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-sm);color:#94a3b8;font-size:13px;font-weight:500;text-decoration:none;transition:all .15s;margin-bottom:1px; }
+        .sb-lnk:hover { background:rgba(255,255,255,.05);color:#cbd5e1; }
+        .sb-lnk.on    { background:rgba(59,109,234,.15);color:#93b4f8; }
+        .sb-lnk-ico   { font-size:15px;width:18px;text-align:center;flex-shrink:0; }
+        .sb-foot { padding:14px 16px;border-top:1px solid rgba(255,255,255,.06); }
+        .sb-usr  { display:flex;align-items:center;gap:9px; }
+        .sb-av   { width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#4f46e5);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff; }
+        .sb-un   { font-size:12px;font-weight:600;color:#e2e8f0; }
+        .sb-ur   { font-size:10px;color:#64748b; }
+
+        /* ── MAIN ─────────────────────────────────────────── */
+        .main { margin-left:var(--sb-w);flex:1;display:flex;flex-direction:column; }
+
+        .topbar { height:var(--tb-h);background:var(--sur);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 28px;gap:10px;position:sticky;top:0;z-index:50; }
+        .tb-back { display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--txt3);text-decoration:none;padding:5px 10px;border-radius:var(--r-sm);transition:all .15s; }
+        .tb-back:hover { background:var(--bg);color:var(--txt); }
+        .tb-sep  { color:var(--bdr-dk); }
+        .tb-title { font-size:15px;font-weight:700;color:var(--txt); }
+        .tb-right { margin-left:auto;display:flex;gap:8px;align-items:center; }
+
+        /* ── CONTENT ──────────────────────────────────────── */
+        .content { padding:28px;max-width:1200px; }
+
+        /* Flash */
+        .flash { display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:var(--r-sm);margin-bottom:20px;font-size:13px;animation:adn .25s ease; }
+        @keyframes adn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:none} }
+        .f-err { background:var(--red-lt);border:1px solid #fca5a5;color:#991b1b; }
+        .f-ok  { background:var(--green-lt);border:1px solid #86efac;color:#15803d; }
+
+        /* Brand header strip */
+        .brand-strip {
+            background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r-lg);
+            padding:16px 20px;margin-bottom:24px;
+            display:flex;align-items:center;gap:14px;
+        }
+        .brand-avatar {
+            width:44px;height:44px;border-radius:10px;
+            background:linear-gradient(135deg,var(--blue-lt),var(--blue-mid));
+            display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;
+        }
+        .brand-strip-name  { font-size:16px;font-weight:700;color:var(--txt); }
+        .brand-strip-meta  { font-size:12px;color:var(--txt3);margin-top:2px; }
+        .brand-strip-right { margin-left:auto;display:flex;gap:8px; }
+
+        /* Section header */
+        .sec-head {
+            display:flex;align-items:center;justify-content:space-between;
+            margin-bottom:14px;
+        }
+        .sec-title { font-size:15px;font-weight:700;color:var(--txt); }
+        .sec-desc  { font-size:12px;color:var(--txt3);margin-top:2px; }
+
+        /* ── ADD SIZE CARD ─────────────────────────────────── */
+        .card {
+            background:var(--sur);border:1px solid var(--bdr);
+            border-radius:var(--r-lg);padding:20px;margin-bottom:24px;
+        }
+        .card-title {
+            font-size:13px;font-weight:700;color:var(--txt);
+            margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bdr);
+            display:flex;align-items:center;gap:7px;
+        }
+
+        /* Grid helpers */
+        .grid { display:grid;gap:14px; }
+        .g2 { grid-template-columns:repeat(2,1fr); }
+        .g3 { grid-template-columns:repeat(3,1fr); }
+        .g4 { grid-template-columns:repeat(4,1fr); }
+
+        /* Section divider inside form */
+        .form-section {
+            border:1px solid var(--bdr);border-radius:var(--r-sm);
+            padding:14px 16px;margin-bottom:14px;background:var(--sur2);
+        }
+        .form-section-title {
+            font-size:11px;font-weight:700;text-transform:uppercase;
+            letter-spacing:.07em;color:var(--txt3);margin-bottom:12px;
+        }
+
+        /* Case section highlighted */
+        .form-section.case-section {
+            background:#fffbeb;border-color:#fde68a;
+        }
+        .form-section.case-section .form-section-title {
+            color:var(--amber);
+        }
+
+        /* Form field */
+        .fld { display:flex;flex-direction:column;gap:5px; }
+        .fld label { font-size:12px;font-weight:600;color:var(--txt2); }
+        .fld label .req { color:var(--red);margin-left:2px; }
+        .fld label .opt { font-size:10px;font-weight:400;color:var(--txt4);margin-left:4px; }
+
+        .inp, .sel {
+            height:36px;background:var(--sur);border:1px solid var(--bdr-dk);
+            border-radius:var(--r-sm);font-family:'Plus Jakarta Sans',system-ui,sans-serif;
+            font-size:13px;padding:0 10px;outline:none;color:var(--txt);transition:all .15s;width:100%;
+        }
+        .inp:focus, .sel:focus {
+            border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,109,234,.1);
+            background:var(--sur);
+        }
+        .inp::placeholder { color:var(--txt4); }
+        .sel {
+            appearance:none;-webkit-appearance:none;cursor:pointer;
+            background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat:no-repeat;background-position:right 10px center;
+            padding-right:28px;
+        }
+        .inp-hint { font-size:11px;color:var(--txt4);margin-top:3px; }
+
+        /* Computed field */
+        .computed {
+            height:36px;background:var(--sur2);border:1px dashed var(--bdr-dk);
+            border-radius:var(--r-sm);font-size:13px;font-weight:600;
+            padding:0 10px;color:var(--txt3);display:flex;align-items:center;
+        }
+
+        /* Buttons */
+        .btn {
+            display:inline-flex;align-items:center;gap:6px;
+            font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-weight:600;
+            border:none;border-radius:var(--r-sm);cursor:pointer;
+            transition:all .15s;text-decoration:none;white-space:nowrap;line-height:1;
+        }
+        .btn-p    { background:var(--blue);color:#fff;font-size:13px;padding:0 18px;height:36px;box-shadow:0 1px 3px rgba(59,109,234,.3); }
+        .btn-p:hover { background:var(--blue-dk); }
+        .btn-sec  { background:var(--sur);color:var(--txt2);font-size:13px;padding:0 14px;height:36px;border:1px solid var(--bdr-dk); }
+        .btn-sec:hover { background:var(--bg); }
+        .btn-del  { background:var(--red-lt);color:var(--red);border:1px solid #fca5a5;font-size:12px;padding:0 10px;height:28px; }
+        .btn-del:hover { background:#fee2e2; }
+
+        .form-actions { display:flex;gap:8px;justify-content:flex-end;padding-top:6px; }
+
+        /* ── SIZES TABLE ───────────────────────────────────── */
+        .tbl-wrap {
+            background:var(--sur);border:1px solid var(--bdr);
+            border-radius:var(--r-lg);overflow:hidden;
+        }
+        table { width:100%;border-collapse:collapse; }
+        thead th {
+            background:var(--sur2);padding:10px 14px;text-align:left;
+            font-size:11px;font-weight:700;text-transform:uppercase;
+            letter-spacing:.07em;color:var(--txt3);border-bottom:1px solid var(--bdr);
+            white-space:nowrap;
+        }
+        tbody tr { border-bottom:1px solid var(--bdr);transition:background .1s; }
+        tbody tr:last-child { border-bottom:none; }
+        tbody tr:hover { background:#fafbff; }
+        td { padding:10px 14px;font-size:13px;color:var(--txt2);vertical-align:middle; }
+
+        .sz-label { font-weight:700;color:var(--txt);font-size:13px; }
+        .sz-sub   { font-size:11px;color:var(--txt4);margin-top:2px; }
+
+        .price-cell { font-weight:600;color:var(--txt); }
+        .price-sub  { font-size:11px;color:var(--txt4);font-weight:400; }
+
+        /* Case info inline */
+        .case-info {
+            display:inline-flex;align-items:center;gap:5px;
+            font-size:11px;font-weight:600;
+            background:var(--amber-lt);color:var(--amber);
+            border:1px solid #fde68a;padding:3px 8px;border-radius:20px;
+        }
+        .case-none { font-size:11px;color:var(--txt4); }
+
+        /* Tag */
+        .tag {
+            display:inline-flex;align-items:center;
+            font-size:11px;font-weight:600;padding:2px 7px;
+            border-radius:20px;background:var(--sur2);border:1px solid var(--bdr-dk);color:var(--txt3);
+        }
+        .tag.active   { background:var(--green-lt);border-color:#86efac;color:var(--green); }
+        .tag.inactive { background:var(--sur2);color:var(--txt4); }
+
+        /* Empty */
+        .empty-cell { text-align:center;padding:40px 20px !important; }
+        .empty-ico  { font-size:28px;opacity:.35;display:block;margin-bottom:8px; }
+        .empty-t    { font-size:14px;font-weight:600;color:var(--txt2); }
+        .empty-d    { font-size:13px;color:var(--txt3);margin-top:4px; }
+
+        .tbl-footer {
+            display:flex;align-items:center;justify-content:space-between;
+            padding:10px 16px;background:var(--sur2);border-top:1px solid var(--bdr);
+            font-size:12px;color:var(--txt3);
+        }
+
+        @media (max-width:960px) {
+            .sb { transform:translateX(-100%); }
+            .main { margin-left:0; }
+            .content { padding:16px; }
+            .g4 { grid-template-columns:repeat(2,1fr); }
+            .g3 { grid-template-columns:repeat(2,1fr); }
+        }
+
+        .fi  { animation:fup .35s ease both; }
+        .fi2 { animation:fup .35s .07s ease both; }
+        .fi3 { animation:fup .35s .14s ease both; }
+        @keyframes fup { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
-<div class="container py-5">
-
-    <div class="mb-4">
-        <h3 class="fw-bold">
-            Manage Sizes -
-            <span th:text="${brand.name}"></span>
-        </h3>
+<!-- SIDEBAR -->
+<aside class="sb">
+    <div class="sb-logo">
+        <div class="sb-ico">🍶</div>
+        <span class="sb-name">BarInventory</span>
+        <span class="sb-tag">ADMIN</span>
     </div>
+    <nav class="sb-nav">
+        <div class="sb-grp">
+            <div class="sb-grp-lbl">Overview</div>
+            <a href="#" class="sb-lnk"><span class="sb-lnk-ico">▣</span> Dashboard</a>
+            <a href="#" class="sb-lnk"><span class="sb-lnk-ico">📊</span> Reports</a>
+        </div>
+        <div class="sb-grp">
+            <div class="sb-grp-lbl">Inventory</div>
+            <a th:href="@{/admin/brands}" class="sb-lnk on"><span class="sb-lnk-ico">🏷</span> Brands</a>
+            <a href="#" class="sb-lnk"><span class="sb-lnk-ico">📦</span> Stock</a>
+            <a href="#" class="sb-lnk"><span class="sb-lnk-ico">📥</span> Purchases</a>
+            <a href="#" class="sb-lnk"><span class="sb-lnk-ico">📤</span> Sales</a>
+        </div>
+        <div class="sb-grp">
+            <div class="sb-grp-lbl">Management</div>
+            <a href="#" class="sb-lnk"><span class="sb-lnk-ico">🏪</span> Suppliers</a>
+            <a href="#" class="sb-lnk"><span class="sb-lnk-ico">👥</span> Users</a>
+            <a href="#" class="sb-lnk"><span class="sb-lnk-ico">⚙</span> Settings</a>
+        </div>
+    </nav>
+    <div class="sb-foot">
+        <div class="sb-usr">
+            <div class="sb-av">AD</div>
+            <div><div class="sb-un">Admin</div><div class="sb-ur">Administrator</div></div>
+        </div>
+    </div>
+</aside>
 
-    <!-- Add Size Card -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
+<!-- MAIN -->
+<div class="main">
 
-            <form th:action="@{'/admin/brands/' + ${brand.id} + '/sizes'}"
-                  method="post"
-                  th:object="${newSize}">
+    <header class="topbar">
+        <a th:href="@{/admin/brands}" class="tb-back">← Brands</a>
+        <span class="tb-sep">/</span>
+        <!-- FIX: brand.name → brand.brandName -->
+        <span class="tb-title" th:text="${brand.brandName}">Brand Name</span>
+        <div class="tb-right">
+            <span style="font-size:12px;color:var(--txt3)">Sizes &amp; Case Config</span>
+        </div>
+    </header>
 
-                <div class="row g-3 align-items-end">
+    <div class="content">
 
-                    <div class="col-md-3">
-                        <label class="form-label">Volume (ml)</label>
-                        <input type="number"
-                               th:field="*{volume}"
-                               class="form-control"
-                               placeholder="180"
-                               required>
-                    </div>
+        <!-- Flash -->
+        <div th:if="${errorMsg}"   class="flash f-err fi"><span>⚠</span><span th:text="${errorMsg}"></span></div>
+        <div th:if="${successMsg}" class="flash f-ok  fi"><span>✓</span><span th:text="${successMsg}"></span></div>
 
-                    <div class="col-md-3">
-                        <label class="form-label">Packaging</label>
-                        <select th:field="*{packaging}"
-                                class="form-select"
-                                required>
-                            <option value="">Select</option>
-                            <option th:each="p : ${packagings}"
-                                    th:value="${p}"
-                                    th:text="${p}">
-                            </option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">Price</label>
-                        <input type="number"
-                               step="0.01"
-                               th:field="*{price}"
-                               class="form-control"
-                               placeholder="₹100"
-                               required>
-                    </div>
-
-                    <div class="col-md-3">
-                        <button class="btn btn-success w-100">
-                            Add Size
-                        </button>
-                    </div>
-
+        <!-- Brand strip -->
+        <div class="brand-strip fi">
+            <div class="brand-avatar">🍾</div>
+            <div>
+                <!-- FIX: brand.name → brand.brandName -->
+                <div class="brand-strip-name" th:text="${brand.brandName}">Brand</div>
+                <div class="brand-strip-meta">
+                    <span th:text="${brand.parentCompany != null ? brand.parentCompany + ' · ' : ''}"></span>
+                    <span th:text="${brand.category != null ? brand.category : 'No category'}"></span>
+                    <span th:if="${brand.exciseCode != null}"
+                          th:text="' · Excise: ' + ${brand.exciseCode}"></span>
                 </div>
-            </form>
-
+            </div>
+            <div class="brand-strip-right">
+                <a th:href="@{'/admin/brands/' + ${brand.id} + '/edit'}" class="btn btn-sec">
+                    ✏ Edit Brand
+                </a>
+            </div>
         </div>
-    </div>
 
-    <!-- Size List -->
-    <div class="card shadow-sm">
-        <div class="card-body">
+        <!-- ── ADD SIZE FORM ─────────────────────────────── -->
+        <div class="fi2">
+            <div class="sec-head">
+                <div>
+                    <div class="sec-title">Add New Size</div>
+                    <div class="sec-desc">Each size is a separate SKU — e.g. 750ml glass, 375ml PET</div>
+                </div>
+            </div>
 
-            <table class="table table-bordered align-middle">
-                <thead class="table-dark">
-                <tr>
-                    <th>Volume</th>
-                    <th>Packaging</th>
-                    <th>Price</th>
-                    <th width="120">Action</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="size : ${brand.sizes}">
-                    <td th:text="${size.volume + ' ml'}"></td>
-                    <td th:text="${size.packaging}"></td>
-                    <td th:text="'₹' + ${size.price}"></td>
-                    <td>
-                        <form th:action="@{'/admin/brands/' + ${brand.id}
-                                 + '/sizes/' + ${size.id} + '/delete'}"
-                              method="post">
-                            <button class="btn btn-sm btn-danger"
-                                    onclick="return confirm('Delete this size?')">
-                                Delete
-                            </button>
-                        </form>
-                    </td>
-                </tr>
+            <div class="card">
+                <div class="card-title">📐 Size Details</div>
 
-                <tr th:if="${#lists.isEmpty(brand.sizes)}">
-                    <td colspan="4" class="text-center text-muted py-4">
-                        No sizes added yet.
-                    </td>
-                </tr>
-                </tbody>
-            </table>
+                <!--
+                    th:object="${newSize}" — your controller must put a blank BrandSize
+                    (or a DTO) in the model as "newSize".
+                    Action posts to the existing sizes endpoint.
+                -->
+                <form th:action="@{'/admin/brands/' + ${brand.id} + '/sizes'}"
+                      method="post"
+                      th:object="${newSize}">
 
-            <a th:href="@{/admin/brands}"
-               class="btn btn-secondary mt-3">Back to Brands</a>
+                    <!-- SECTION 1: Identity -->
+                    <div class="form-section">
+                        <div class="form-section-title">📋 Identity</div>
+                        <div class="grid g4">
 
+                            <div class="fld">
+                                <label>Size Label <span class="req">*</span></label>
+                                <!--
+                                    sizeLabel is the @Column(nullable=false) required field.
+                                    Old form used "volume" — now correctly uses sizeLabel.
+                                -->
+                                <input type="text" th:field="*{sizeLabel}"
+                                       class="inp" placeholder="e.g. 750ml" required>
+                                <span class="inp-hint">Display label shown on reports</span>
+                            </div>
+
+                            <div class="fld">
+                                <label>Volume (ml) <span class="opt">optional</span></label>
+                                <!-- volumeMl — actual numeric ml value -->
+                                <input type="number" th:field="*{volumeMl}"
+                                       class="inp" placeholder="750" min="1">
+                            </div>
+
+                            <div class="fld">
+                                <label>Packaging <span class="opt">optional</span></label>
+                                <!--
+                                    packaging enum: GLASS_BOTTLE, PET, CAN, TETRA, KEG
+                                    Old form used "packaging" field name — still correct.
+                                -->
+                                <select th:field="*{packaging}" class="sel">
+                                    <option value="">— Select —</option>
+                                    <option th:each="p : ${T(com.barinventory.brands.entity.BrandSize.Packaging).values()}"
+                                            th:value="${p}" th:text="${p}"></option>
+                                </select>
+                            </div>
+
+                            <div class="fld">
+                                <label>Display Order <span class="opt">optional</span></label>
+                                <input type="number" th:field="*{displayOrder}"
+                                       class="inp" placeholder="1" min="1">
+                                <span class="inp-hint">Lower = shown first</span>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- SECTION 2: Pricing -->
+                    <div class="form-section">
+                        <div class="form-section-title">💰 Pricing</div>
+                        <div class="grid g4">
+
+                            <div class="fld">
+                                <label>Purchase Price ₹ <span class="opt">optional</span></label>
+                                <!--
+                                    purchasePrice — per-bottle cost.
+                                    Old form had a single "price" field — split into proper fields now.
+                                -->
+                                <input type="number" step="0.01" th:field="*{purchasePrice}"
+                                       class="inp" placeholder="0.00" min="0">
+                                <span class="inp-hint">Per bottle from depot (loose)</span>
+                            </div>
+
+                            <div class="fld">
+                                <label>Selling Price ₹ <span class="opt">optional</span></label>
+                                <input type="number" step="0.01" th:field="*{sellingPrice}"
+                                       class="inp" placeholder="0.00" min="0">
+                            </div>
+
+                            <div class="fld">
+                                <label>MRP ₹ <span class="opt">optional</span></label>
+                                <input type="number" step="0.01" th:field="*{mrp}"
+                                       class="inp" placeholder="0.00" min="0">
+                            </div>
+
+                            <div class="fld">
+                                <label>MRP Rounding <span class="opt">optional</span></label>
+                                <select th:field="*{mrpRounding}" class="sel">
+                                    <option value="">— None —</option>
+                                    <option th:each="r : ${T(com.barinventory.brands.entity.BrandSize.MrpRounding).values()}"
+                                            th:value="${r}" th:text="${r}"></option>
+                                </select>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- SECTION 3: Case Purchasing (NEW) -->
+                    <div class="form-section case-section">
+                        <div class="form-section-title">📦 Case Purchasing (Depot)</div>
+                        <div class="grid g3">
+
+                            <div class="fld">
+                                <label>Bottles per Case <span class="opt">optional</span></label>
+                                <!--
+                                    bottlesPerCase — NEW field added to BrandSize.
+                                    Typical values: 750ml=12, 375ml=24, 180ml=48, 90ml=96
+                                -->
+                                <input type="number" th:field="*{bottlesPerCase}"
+                                       class="inp" placeholder="e.g. 12"
+                                       min="1" id="bottlesPerCase"
+                                       oninput="computeCostPerBottle()">
+                                <span class="inp-hint">e.g. 750ml→12 · 180ml→48 · 90ml→96</span>
+                            </div>
+
+                            <div class="fld">
+                                <label>Case Price ₹ <span class="opt">optional</span></label>
+                                <!--
+                                    casePrice — NEW field: total price bar owner pays for one case.
+                                -->
+                                <input type="number" step="0.01" th:field="*{casePrice}"
+                                       class="inp" placeholder="e.g. 6000.00"
+                                       min="0" id="casePrice"
+                                       oninput="computeCostPerBottle()">
+                                <span class="inp-hint">What bar owner pays per full case</span>
+                            </div>
+
+                            <div class="fld">
+                                <label>Cost per Bottle (computed)</label>
+                                <!-- Read-only derived display — not posted, just informational -->
+                                <div class="computed" id="costPerBottleDisplay">—</div>
+                                <span class="inp-hint">Case price ÷ bottles per case</span>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- SECTION 4: Tax & Compliance -->
+                    <div class="form-section">
+                        <div class="form-section-title">🏛 Tax &amp; Compliance</div>
+                        <div class="grid g4">
+
+                            <div class="fld">
+                                <label>GST % <span class="opt">optional</span></label>
+                                <input type="number" step="0.01" th:field="*{gstPercent}"
+                                       class="inp" placeholder="18.00" min="0" max="100">
+                            </div>
+
+                            <div class="fld">
+                                <label>Excise Cess % <span class="opt">optional</span></label>
+                                <input type="number" step="0.01" th:field="*{exciseCessPercent}"
+                                       class="inp" placeholder="0.00" min="0" max="100">
+                            </div>
+
+                            <div class="fld">
+                                <label>TCS % <span class="opt">optional</span></label>
+                                <input type="number" step="0.01" th:field="*{tcsPercent}"
+                                       class="inp" placeholder="0.10" min="0" max="100">
+                            </div>
+
+                            <div class="fld">
+                                <label>ABV % <span class="opt">optional</span></label>
+                                <input type="number" step="0.1" th:field="*{abvPercent}"
+                                       class="inp" placeholder="42.8" min="0" max="100">
+                            </div>
+
+                        </div>
+                        <div class="grid g3" style="margin-top:14px">
+
+                            <div class="fld">
+                                <label>Barcode <span class="opt">optional</span></label>
+                                <input type="text" th:field="*{barcode}"
+                                       class="inp" placeholder="EAN / UPC">
+                            </div>
+
+                            <div class="fld">
+                                <label>HSN Code <span class="opt">optional</span></label>
+                                <input type="text" th:field="*{hsnCode}"
+                                       class="inp" placeholder="2208">
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <a th:href="@{/admin/brands}" class="btn btn-sec">Cancel</a>
+                        <button type="submit" class="btn btn-p">+ Add Size</button>
+                    </div>
+
+                </form>
+            </div>
         </div>
-    </div>
 
-</div>
+        <!-- ── SIZES TABLE ───────────────────────────────── -->
+        <div class="fi3">
+            <div class="sec-head">
+                <div>
+                    <div class="sec-title">Existing Sizes</div>
+                    <div class="sec-desc"
+                         th:text="${brand.sizes.size() + ' SKU' + (brand.sizes.size() != 1 ? 's' : '') + ' registered'}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="tbl-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Size / Label</th>
+                        <th>Packaging</th>
+                        <th>Pricing</th>
+                        <th>Case Config</th>
+                        <th>Tax %</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="size : ${brand.sizes}">
+
+                        <!-- Size label + volume -->
+                        <td>
+                            <!-- FIX: old template used size.volume — now size.sizeLabel / size.volumeMl -->
+                            <div class="sz-label" th:text="${size.sizeLabel}"></div>
+                            <div class="sz-sub"
+                                 th:if="${size.volumeMl != null}"
+                                 th:text="${size.volumeMl + ' ml'}"></div>
+                        </td>
+
+                        <!-- Packaging -->
+                        <td>
+                            <span th:if="${size.packaging != null}"
+                                  th:text="${size.packaging}"></span>
+                            <span th:if="${size.packaging == null}"
+                                  style="color:var(--txt4)">—</span>
+                        </td>
+
+                        <!-- Pricing column -->
+                        <td>
+                            <div class="price-cell"
+                                 th:if="${size.sellingPrice != null}"
+                                 th:text="'₹' + ${size.sellingPrice}">
+                            </div>
+                            <div class="price-sub"
+                                 th:if="${size.mrp != null}"
+                                 th:text="'MRP ₹' + ${size.getEffectiveMrp()}">
+                            </div>
+                            <div class="price-sub"
+                                 th:if="${size.purchasePrice != null}"
+                                 th:text="'Cost ₹' + ${size.purchasePrice}">
+                            </div>
+                            <span th:if="${size.sellingPrice == null and size.mrp == null}"
+                                  style="color:var(--txt4);font-size:12px">Not set</span>
+                        </td>
+
+                        <!-- Case config — NEW columns -->
+                        <td>
+                            <span class="case-info"
+                                  th:if="${size.bottlesPerCase != null}">
+                                📦
+                                <span th:text="${size.bottlesPerCase + ' btl/case'}"></span>
+                                <span th:if="${size.casePrice != null}"
+                                      th:text="'· ₹' + ${size.casePrice}"></span>
+                            </span>
+                            <span class="case-none"
+                                  th:if="${size.bottlesPerCase == null}">
+                                Not configured
+                            </span>
+                        </td>
+
+                        <!-- Tax info -->
+                        <td>
+                            <div th:if="${size.gstPercent != null}"
+                                 style="font-size:12px;"
+                                 th:text="'GST ' + ${size.gstPercent} + '%'"></div>
+                            <div th:if="${size.exciseCessPercent != null}"
+                                 style="font-size:12px;color:var(--txt3)"
+                                 th:text="'Exc ' + ${size.exciseCessPercent} + '%'"></div>
+                            <span th:if="${size.gstPercent == null and size.exciseCessPercent == null}"
+                                  style="color:var(--txt4);font-size:12px">—</span>
+                        </td>
+
+                        <!-- Active status -->
+                        <td>
+                            <span th:class="${size.active ? 'tag active' : 'tag inactive'}"
+                                  th:text="${size.active ? 'Active' : 'Inactive'}">
+                            </span>
+                        </td>
+
+                        <!-- Delete action -->
+                        <td>
+                            <form th:action="@{'/admin/brands/' + ${brand.id}
+                                     + '/sizes/' + ${size.id} + '/delete'}"
+                                  method="post"
+                                  onsubmit="return confirm('Delete this size? This cannot be undone.')">
+                                <button type="submit" class="btn btn-del">🗑 Delete</button>
+                            </form>
+                        </td>
+
+                    </tr>
+
+                    <!-- Empty state -->
+                    <tr th:if="${#lists.isEmpty(brand.sizes)}">
+                        <td colspan="7" class="empty-cell">
+                            <span class="empty-ico">📐</span>
+                            <div class="empty-t">No sizes added yet</div>
+                            <div class="empty-d">Use the form above to add your first size</div>
+                        </td>
+                    </tr>
+
+                    </tbody>
+                </table>
+
+                <div class="tbl-footer">
+                    <span th:text="${brand.sizes.size() + ' size(s)'}"></span>
+                    <a th:href="@{/admin/brands}" style="color:var(--blue);text-decoration:none;font-size:12px;font-weight:600">← Back to all brands</a>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+    /**
+     * Live cost-per-bottle calculator in the Add Size form.
+     * Reads bottlesPerCase + casePrice → updates the read-only display field.
+     * Pure JS, no server round-trip needed.
+     */
+    function computeCostPerBottle() {
+        const bottles  = parseFloat(document.getElementById('bottlesPerCase').value);
+        const casePx   = parseFloat(document.getElementById('casePrice').value);
+        const display  = document.getElementById('costPerBottleDisplay');
+
+        if (bottles > 0 && casePx >= 0 && !isNaN(bottles) && !isNaN(casePx)) {
+            const cost = (casePx / bottles).toFixed(2);
+            display.textContent = '₹ ' + cost;
+            display.style.color = 'var(--amber)';
+        } else {
+            display.textContent = '—';
+            display.style.color = 'var(--txt3)';
+        }
+    }
+</script>
 </body>
 </html>

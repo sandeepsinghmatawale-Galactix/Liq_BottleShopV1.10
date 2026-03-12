@@ -21,7 +21,7 @@ public class BillEmailService {
     public void sendBillByEmail(Bill bill, String toEmail) throws Exception {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
+        helper.setFrom("alcobevinventory.india@gmail.com");
         helper.setTo(toEmail);
         helper.setSubject("Your Bill #" + bill.getId());
         helper.setText("<p>Please find your bill attached.</p>", true);

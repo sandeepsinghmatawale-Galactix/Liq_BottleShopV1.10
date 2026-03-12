@@ -1,8 +1,30 @@
 package com.barinventory.brands.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.barinventory.brands.CaseConfig;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "brand_sizes")
@@ -69,7 +91,43 @@ public class BrandSize {
     @Builder.Default
     private boolean active = true;
 
+    // ── CASE PURCHASING ───────────────────────────────────────
+    // A case is the wholesale unit received from depot.
+    // e.g. 750ml → 12 bottles/case, 180ml → 48 bottles/case
+
+    /**
+     * How many individual bottles come in one depot case for this size.
+     * Nullable — bar owner can leave blank if they buy loose bottles.
+     * Examples: 750ml=12, 375ml=24, 180ml=48, 90ml=96
+     */
+    @Column(name = "bottles_per_case")
+    private Integer bottlesPerCase;
+
+    /**
+     * Price the bar owner pays for one full case from the depot.
+     * Per-bottle cost = casePrice / bottlesPerCase (see helper below).
+     */
+    @Column(name = "case_price", precision = 10, scale = 2)
+    private BigDecimal casePrice;
+
+    // ── Case config variants (optional — for brands that sell
+    //    the same size in multiple case-pack sizes, e.g. 6-pack & 12-pack)
+    @OneToMany(mappedBy = "brandSize", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<CaseConfig> caseConfigs = new ArrayList<>();
+
+    public void addCaseConfig(CaseConfig config) {
+        caseConfigs.add(config);
+        config.setBrandSize(this);
+    }
+
+    public void removeCaseConfig(CaseConfig config) {
+        caseConfigs.remove(config);
+        config.setBrandSize(null);
+    }
+
     // ── Transient helpers ─────────────────────────────────────
+
     @Transient
     public BigDecimal getEffectiveMrp() {
         if (mrp == null) return null;
@@ -81,6 +139,27 @@ public class BrandSize {
     public BigDecimal getGrossMargin() {
         if (sellingPrice == null || purchasePrice == null) return null;
         return sellingPrice.subtract(purchasePrice);
+    }
+
+    /**
+     * Cost per bottle derived from case price.
+     * Returns null if either field is missing or bottlesPerCase is zero.
+     */
+    @Transient
+    public BigDecimal getCostPerBottleFromCase() {
+        if (casePrice == null || bottlesPerCase == null || bottlesPerCase == 0) return null;
+        return casePrice.divide(BigDecimal.valueOf(bottlesPerCase), 2, java.math.RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Margin per bottle when bar owner sells at sellingPrice
+     * and sources bottles via casePrice.
+     */
+    @Transient
+    public BigDecimal getCaseMarginPerBottle() {
+        BigDecimal costPerBottle = getCostPerBottleFromCase();
+        if (costPerBottle == null || sellingPrice == null) return null;
+        return sellingPrice.subtract(costPerBottle);
     }
 
     // ── Enums ─────────────────────────────────────────────────

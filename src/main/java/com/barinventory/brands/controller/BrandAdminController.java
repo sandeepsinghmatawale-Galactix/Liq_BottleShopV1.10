@@ -48,9 +48,9 @@ public class BrandAdminController {
         BrandFormDTO form = new BrandFormDTO();
         form.getSizes().add(new BrandFormDTO.SizeRow()); // one empty row by default
 
-        model.addAttribute("brandFormDTO",    form);
-        model.addAttribute("categories",      Brand.Category.values());
-        model.addAttribute("subCategories",   Brand.SubCategory.values());
+        model.addAttribute("brandFormDTO",     form);
+        model.addAttribute("categories",       Brand.Category.values());
+        model.addAttribute("subCategories",    Brand.SubCategory.values());
         model.addAttribute("packagingOptions", BrandSize.Packaging.values());
         model.addAttribute("roundingOptions",  BrandSize.MrpRounding.values());
         model.addAttribute("isEdit",           false);
@@ -108,13 +108,19 @@ public class BrandAdminController {
                 row.setHsnCode(s.getHsnCode());
                 row.setDisplayOrder(s.getDisplayOrder());
                 row.setActive(s.isActive());
+
+                // ── CASE FIELDS (new) — must be copied or edit
+                //    form will show blank case pricing for existing sizes
+                row.setBottlesPerCase(s.getBottlesPerCase());
+                row.setCasePrice(s.getCasePrice());
+
                 form.getSizes().add(row);
             });
         }
 
-        model.addAttribute("brandFormDTO",    form);
-        model.addAttribute("categories",      Brand.Category.values());
-        model.addAttribute("subCategories",   Brand.SubCategory.values());
+        model.addAttribute("brandFormDTO",     form);
+        model.addAttribute("categories",       Brand.Category.values());
+        model.addAttribute("subCategories",    Brand.SubCategory.values());
         model.addAttribute("packagingOptions", BrandSize.Packaging.values());
         model.addAttribute("roundingOptions",  BrandSize.MrpRounding.values());
         model.addAttribute("isEdit",           true);

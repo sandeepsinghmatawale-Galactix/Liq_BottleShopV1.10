@@ -1,505 +1,829 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title th:text="${isEdit} ? 'Edit Brand — BarInventory' : 'New Brand — BarInventory'">Brand Form</title>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --sb-w:240px; --tb-h:56px;
-      --blue:#3b6dea; --blue-dk:#2a57cc; --blue-lt:#eef2fd; --blue-mid:#c7d4fa;
-      --green:#16a34a; --green-lt:#dcfce7;
-      --red:#dc2626; --red-lt:#fee2e2;
-      --amber:#d97706; --amber-lt:#fef3c7;
-      --bg:#f3f4f8; --sur:#fff; --sur2:#f9fafb;
-      --bdr:#e5e7eb; --bdr-dk:#d1d5db;
-      --txt:#111827; --txt2:#374151; --txt3:#6b7280; --txt4:#9ca3af;
-      --sb-bg:#1e2433; --r:10px; --r-sm:6px; --r-lg:14px;
-    }
-    html { font-size: 14px; }
-    body { font-family:'Plus Jakarta Sans',system-ui,sans-serif; background:var(--bg); color:var(--txt); min-height:100vh; display:flex; }
+    <meta charset="UTF-8">
+    <title th:text="${isEdit} ? 'Edit Brand — BarInventory' : 'Add Brand — BarInventory'">Brand Form</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --sb-w:240px; --tb-h:56px;
+            --blue:#3b6dea; --blue-dk:#2a57cc; --blue-lt:#eef2fd; --blue-mid:#c7d4fa;
+            --green:#16a34a; --green-lt:#dcfce7;
+            --red:#dc2626; --red-lt:#fee2e2;
+            --amber:#d97706; --amber-lt:#fef3c7;
+            --purple:#7c3aed; --purple-lt:#ede9fe;
+            --bg:#f3f4f8; --sur:#ffffff; --sur2:#f9fafb;
+            --bdr:#e5e7eb; --bdr-dk:#d1d5db;
+            --txt:#111827; --txt2:#374151; --txt3:#6b7280; --txt4:#9ca3af;
+            --sb-bg:#1e2433; --r:10px; --r-sm:6px; --r-lg:14px;
+        }
+        html { font-size:14px; }
+        body { font-family:'Plus Jakarta Sans',system-ui,sans-serif; background:var(--bg); color:var(--txt); min-height:100vh; display:flex; }
 
-    /* SIDEBAR */
-    .sb { width:var(--sb-w);background:var(--sb-bg);min-height:100vh;position:fixed;left:0;top:0;display:flex;flex-direction:column;z-index:100; }
-    .sb-logo { padding:0 20px;height:var(--tb-h);display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.06); }
-    .sb-ico  { width:30px;height:30px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px; }
-    .sb-name { font-size:13.5px;font-weight:700;color:#fff; }
-    .sb-tag  { font-size:9px;background:rgba(59,109,234,.3);color:#93b4f8;padding:1px 6px;border-radius:20px;font-weight:600;letter-spacing:.04em;margin-left:auto; }
-    .sb-nav  { flex:1;padding:12px 10px;overflow-y:auto; }
-    .sb-grp  { margin-bottom:20px; }
-    .sb-grp-lbl { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#475569;padding:0 10px 6px; }
-    .sb-lnk { display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-sm);color:#94a3b8;font-size:13px;font-weight:500;text-decoration:none;transition:all .15s;margin-bottom:1px; }
-    .sb-lnk:hover { background:rgba(255,255,255,.05);color:#cbd5e1; }
-    .sb-lnk.on { background:rgba(59,109,234,.15);color:#93b4f8; }
-    .sb-foot { padding:14px 16px;border-top:1px solid rgba(255,255,255,.06); }
-    .sb-usr  { display:flex;align-items:center;gap:9px; }
-    .sb-av   { width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#4f46e5);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff; }
-    .sb-un   { font-size:12px;font-weight:600;color:#e2e8f0; }
-    .sb-ur   { font-size:10px;color:#64748b; }
+        /* ── SIDEBAR ─────────────────────────────────────── */
+        .sb { width:var(--sb-w);background:var(--sb-bg);min-height:100vh;position:fixed;left:0;top:0;display:flex;flex-direction:column;z-index:100; }
+        .sb-logo { padding:0 20px;height:var(--tb-h);display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.06); }
+        .sb-ico  { width:30px;height:30px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px; }
+        .sb-name { font-size:13.5px;font-weight:700;color:#fff; }
+        .sb-tag  { font-size:9px;background:rgba(59,109,234,.3);color:#93b4f8;padding:1px 6px;border-radius:20px;font-weight:600;letter-spacing:.04em;margin-left:auto; }
+        .sb-nav  { flex:1;padding:12px 10px;overflow-y:auto; }
+        .sb-grp  { margin-bottom:20px; }
+        .sb-grp-lbl { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#475569;padding:0 10px 6px; }
+        .sb-lnk  { display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-sm);color:#94a3b8;font-size:13px;font-weight:500;text-decoration:none;transition:all .15s;margin-bottom:1px; }
+        .sb-lnk:hover { background:rgba(255,255,255,.05);color:#cbd5e1; }
+        .sb-lnk.on { background:rgba(59,109,234,.15);color:#93b4f8; }
+        .sb-lnk-ico { font-size:15px;width:18px;text-align:center;flex-shrink:0; }
+        .sb-foot { padding:14px 16px;border-top:1px solid rgba(255,255,255,.06); }
+        .sb-usr  { display:flex;align-items:center;gap:9px; }
+        .sb-av   { width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#4f46e5);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff; }
+        .sb-un   { font-size:12px;font-weight:600;color:#e2e8f0; }
+        .sb-ur   { font-size:10px;color:#64748b; }
 
-    /* MAIN */
-    .main { margin-left:var(--sb-w);flex:1;display:flex;flex-direction:column;min-height:100vh; }
-    .topbar { height:var(--tb-h);background:var(--sur);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 28px;position:sticky;top:0;z-index:50; }
-    .bc { display:flex;align-items:center;gap:6px;font-size:12px;color:var(--txt3); }
-    .bc a { color:var(--blue);text-decoration:none;font-weight:600; }
-    .bc a:hover { text-decoration:underline; }
-    .bc-sep { color:var(--txt4); }
-    .bc-cur { color:var(--txt2);font-weight:600; }
+        /* ── LAYOUT ──────────────────────────────────────── */
+        .main { margin-left:var(--sb-w);flex:1;display:flex;flex-direction:column; }
+        .topbar { height:var(--tb-h);background:var(--sur);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 28px;gap:10px;position:sticky;top:0;z-index:50; }
+        .tb-back { display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--txt3);text-decoration:none;padding:5px 10px;border-radius:var(--r-sm);transition:all .15s; }
+        .tb-back:hover { background:var(--bg);color:var(--txt); }
+        .tb-sep  { color:var(--bdr-dk); }
+        .tb-title { font-size:15px;font-weight:700;color:var(--txt); }
+        .tb-right { margin-left:auto;display:flex;gap:8px;align-items:center; }
+        .content { padding:28px 32px;max-width:1000px; }
 
-    /* CONTENT */
-    .content { padding:24px 28px; flex:1; }
+        /* ── FLASH ───────────────────────────────────────── */
+        .flash { display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:var(--r-sm);margin-bottom:20px;font-size:13px;animation:adn .25s ease; }
+        @keyframes adn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:none} }
+        .f-err { background:var(--red-lt);border:1px solid #fca5a5;color:#991b1b; }
+        .f-ok  { background:var(--green-lt);border:1px solid #86efac;color:#15803d; }
 
-    /* FLASH */
-    .flash { display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:var(--r-sm);margin-bottom:18px;font-size:13px; }
-    .f-err { background:var(--red-lt);border:1px solid #fca5a5;color:#991b1b; }
-    .f-ok  { background:var(--green-lt);border:1px solid #86efac;color:#15803d; }
+        /* ── PAGE HEADER ─────────────────────────────────── */
+        .pg-head { display:flex;align-items:center;justify-content:space-between;margin-bottom:22px; }
+        .pg-title { font-size:20px;font-weight:700; }
+        .pg-desc  { font-size:13px;color:var(--txt3);margin-top:3px; }
 
-    /* CARDS */
-    .card { background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r-lg);margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.04); }
-    .card-head { padding:14px 20px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px; }
-    .ch-ico { width:30px;height:30px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0; }
-    .ch-ico.blue  { background:var(--blue-lt); }
-    .ch-ico.amber { background:var(--amber-lt); }
-    .ch-ico.green { background:var(--green-lt); }
-    .ch-title { font-size:13.5px;font-weight:700;color:var(--txt); }
-    .ch-desc  { font-size:11px;color:var(--txt3);margin-top:1px; }
-    .card-body { padding:18px 20px; }
+        /* ── SECTION CARD (brand info / tax) ─────────────── */
+        .sc {
+            background:var(--sur);border:1px solid var(--bdr);
+            border-radius:var(--r-lg);margin-bottom:20px;
+            box-shadow:0 1px 3px rgba(0,0,0,.05);
+        }
+        .sc-head {
+            display:flex;align-items:center;justify-content:space-between;
+            padding:11px 18px;background:var(--sur2);border-bottom:1px solid var(--bdr);
+            border-radius:var(--r-lg) var(--r-lg) 0 0;
+        }
+        .sc-head-l { display:flex;align-items:center;gap:8px; }
+        .sc-ico   { font-size:14px; }
+        .sc-title { font-size:13px;font-weight:700;color:var(--txt); }
+        .sc-badge { font-size:10px;font-weight:700;background:var(--blue);color:#fff;padding:1px 7px;border-radius:20px; }
+        .sc-desc  { font-size:12px;color:var(--txt3); }
+        .sc-body  { padding:18px; }
 
-    /* GRID */
-    .gr { display:grid;gap:14px;margin-bottom:14px; }
-    .gr:last-child { margin-bottom:0; }
-    .g2 { grid-template-columns:repeat(2,1fr); }
-    .g3 { grid-template-columns:repeat(3,1fr); }
-    .g4 { grid-template-columns:repeat(4,1fr); }
+        /* ── FIELD GRID ──────────────────────────────────── */
+        .fg  { display:grid;gap:14px;margin-bottom:14px; }
+        .fg:last-child { margin-bottom:0; }
+        .g2  { grid-template-columns:repeat(2,1fr); }
+        .g3  { grid-template-columns:repeat(3,1fr); }
+        .g4  { grid-template-columns:repeat(4,1fr); }
+        .sp2 { grid-column:span 2; }
+        .fld { display:flex;flex-direction:column;gap:4px; }
+        .fld label { font-size:11.5px;font-weight:600;color:var(--txt2); }
+        .req { color:var(--red);margin-left:2px; }
+        .opt { font-size:10px;font-weight:400;color:var(--txt4);margin-left:4px; }
+        .hint { font-size:10.5px;color:var(--txt4); }
 
-    /* FORM CONTROLS */
-    .lbl { display:block;font-size:11.5px;font-weight:600;color:var(--txt2);margin-bottom:4px; }
-    .req { color:var(--red);margin-left:1px; }
-    .hint { font-size:10.5px;color:var(--txt4);margin-top:3px; }
+        .inp,.sel {
+            height:35px;background:var(--sur);border:1px solid var(--bdr-dk);
+            border-radius:var(--r-sm);font-family:'Plus Jakarta Sans',system-ui,sans-serif;
+            font-size:13px;padding:0 10px;outline:none;color:var(--txt);
+            transition:border-color .15s,box-shadow .15s;width:100%;
+        }
+        .inp:focus,.sel:focus { border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,109,234,.1); }
+        .inp::placeholder { color:var(--txt4); }
+        .sel {
+            appearance:none;-webkit-appearance:none;cursor:pointer;
+            background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat:no-repeat;background-position:right 9px center;padding-right:26px;
+        }
 
-    .inp, .sel {
-      width:100%;height:34px;background:var(--sur2);border:1px solid var(--bdr-dk);
-      border-radius:var(--r-sm);font-family:'Plus Jakarta Sans',system-ui,sans-serif;
-      font-size:13px;color:var(--txt);padding:0 10px;outline:none;transition:all .15s;
-    }
-    .inp:focus, .sel:focus { border-color:var(--blue);background:var(--sur);box-shadow:0 0 0 3px rgba(59,109,234,.1); }
-    .inp::placeholder { color:var(--txt4); }
-    .inp.mono { font-family:'JetBrains Mono',monospace;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em; }
-    .sel {
-      appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:28px;
-      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-      background-repeat:no-repeat;background-position:right 8px center;
-    }
+        /* ── SIZES SECTION ───────────────────────────────── */
+        .sizes-wrap {
+            background:var(--sur);border:1px solid var(--bdr);
+            border-radius:var(--r-lg);margin-bottom:20px;
+            box-shadow:0 1px 3px rgba(0,0,0,.05);
+        }
+        .sizes-header {
+            display:flex;align-items:center;justify-content:space-between;
+            padding:11px 18px;background:var(--sur2);border-bottom:1px solid var(--bdr);
+            border-radius:var(--r-lg) var(--r-lg) 0 0;
+        }
+        .sizes-header-l { display:flex;align-items:center;gap:8px; }
+        .sizes-body { padding:16px 18px;display:flex;flex-direction:column;gap:14px; }
+        .sizes-footer {
+            display:flex;align-items:center;gap:10px;
+            padding:12px 18px;background:var(--sur2);
+            border-top:1px solid var(--bdr);
+            border-radius:0 0 var(--r-lg) var(--r-lg);
+        }
+        .sz-tip { font-size:11.5px;color:var(--txt3);margin-left:auto; }
 
-    .ig { position:relative;display:flex;align-items:center; }
-    .ig .inp { padding-left:22px; }
-    .ig-pfx { position:absolute;left:8px;font-size:12px;color:var(--txt3);pointer-events:none; }
-    .ig-sfx { position:absolute;right:8px;font-size:11px;color:var(--txt4);pointer-events:none; }
+        /* ── SIZE CARD (two-row layout) ──────────────────── */
+        /*
+         * Each size is a self-contained card.
+         * Row 1: identity + pricing  (visible at a glance)
+         * Row 2: case config + tax   (slightly de-emphasised)
+         * No horizontal scroll. Everything fits in the page width.
+         */
+        .sz-card {
+            border:1px solid var(--bdr);border-radius:var(--r);
+            overflow:hidden;transition:box-shadow .15s;
+            background:var(--sur);
+        }
+        .sz-card:hover { box-shadow:0 2px 10px rgba(0,0,0,.07); }
 
-    /* Toggle */
-    .tgl-wrap { display:flex;align-items:center;gap:8px;padding-top:18px; }
-    .tgl { position:relative;width:38px;height:21px; }
-    .tgl input { opacity:0;width:0;height:0; }
-    .tgl-s { position:absolute;inset:0;background:#d1d5db;border-radius:21px;cursor:pointer;transition:background .2s; }
-    .tgl-s::before { content:'';position:absolute;width:15px;height:15px;background:#fff;border-radius:50%;left:3px;top:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2); }
-    .tgl input:checked + .tgl-s { background:var(--green); }
-    .tgl input:checked + .tgl-s::before { transform:translateX(17px); }
-    .tgl-lbl { font-size:13px;font-weight:600;color:var(--txt2); }
+        /* Card top bar — number + label preview + remove */
+        .sz-card-bar {
+            display:flex;align-items:center;gap:10px;
+            padding:8px 14px;background:var(--sur2);border-bottom:1px solid var(--bdr);
+        }
+        .sz-num {
+            width:22px;height:22px;border-radius:50%;
+            background:var(--blue-lt);color:var(--blue-dk);
+            font-size:11px;font-weight:700;flex-shrink:0;
+            display:inline-flex;align-items:center;justify-content:center;
+        }
+        .sz-preview { font-size:12px;font-weight:600;color:var(--txt);flex:1; }
+        .sz-preview-sub { font-size:11px;color:var(--txt4);font-weight:400;margin-left:6px; }
+        .btn-rm {
+            display:inline-flex;align-items:center;justify-content:center;
+            padding:3px 10px;height:26px;border-radius:var(--r-sm);
+            background:var(--red-lt);color:var(--red);border:1px solid #fca5a5;
+            cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;font-family:inherit;
+        }
+        .btn-rm:hover { background:#fee2e2; }
 
-    /* SIZES TABLE */
-    .sz-scroll { overflow-x:auto;border-radius:var(--r-sm);border:1px solid var(--bdr); }
-    #szTable { width:100%;border-collapse:collapse;min-width:1180px; }
-    #szTable thead th {
-      background:var(--sur2);padding:8px 8px;font-size:10px;font-weight:700;
-      letter-spacing:.07em;text-transform:uppercase;color:var(--txt3);
-      border-bottom:2px solid var(--bdr);white-space:nowrap;
-    }
-    .sz-row td { padding:5px 5px;border-bottom:1px solid var(--bdr);vertical-align:middle; }
-    .sz-row:last-child td { border-bottom:none; }
-    .sz-row:hover td { background:#fafbff; }
-    .sz-row .inp, .sz-row .sel { font-size:11.5px;height:30px;background:var(--sur2); }
+        /* Two content rows inside each card */
+        .sz-row1,.sz-row2 { display:grid;gap:12px;padding:12px 14px; }
 
-    .add-sz { display:inline-flex;align-items:center;gap:6px;padding:7px 12px;
-              border:1.5px dashed #93c5fd;background:rgba(59,109,234,.02);border-radius:var(--r-sm);
-              color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;margin-top:12px;
-              background-color:transparent; }
-    .add-sz:hover { background:var(--blue-lt);border-color:var(--blue); }
+        /* Row 1: Size label (wider) + Volume + Packaging + Selling + MRP + MRP Round */
+        .sz-row1 { grid-template-columns:1.4fr 0.8fr 1.2fr 1fr 1fr 1.2fr;border-bottom:1px dashed var(--bdr); }
 
-    .del-sz { background:none;border:none;cursor:pointer;color:var(--txt4);font-size:14px;padding:0 2px;transition:color .15s; }
-    .del-sz:hover { color:var(--red); }
+        /* Row 2: Case (Btl/Case + Case Price + CPB computed) + Tax (GST + ExcCess + TCS + ABV) + Barcode */
+        .sz-row2 { grid-template-columns:0.8fr 1fr 0.9fr  0.7fr 0.8fr 0.7fr 0.7fr  1fr;background:var(--sur2); }
 
-    /* SAVE BAR */
-    .save-bar { position:sticky;bottom:0;background:var(--sur);border-top:1px solid var(--bdr);
-                padding:10px 28px;display:flex;gap:8px;align-items:center;z-index:50;
-                box-shadow:0 -4px 16px rgba(0,0,0,.06); }
-    .btn { display:inline-flex;align-items:center;gap:5px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;
-           font-weight:600;border:none;border-radius:var(--r-sm);cursor:pointer;transition:all .15s;
-           text-decoration:none;white-space:nowrap;font-size:13px;line-height:1; }
-    .btn-p { background:var(--blue);color:#fff;padding:0 18px;height:34px;box-shadow:0 1px 4px rgba(59,109,234,.3); }
-    .btn-p:hover { background:var(--blue-dk); }
-    .btn-s { background:var(--sur2);color:var(--txt2);border:1px solid var(--bdr-dk);padding:0 14px;height:34px; }
-    .btn-s:hover { background:var(--bg); }
-    .sz-ct { margin-left:auto;font-size:11.5px;color:var(--txt3); }
+        /* Row labels */
+        .row-label {
+            display:flex;align-items:center;gap:5px;
+            font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+            margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--bdr);
+            grid-column:1 / -1;
+        }
+        .rl-dot {
+            width:6px;height:6px;border-radius:50%;flex-shrink:0;
+        }
 
-    @media(max-width:960px){
-      .sb { transform:translateX(-100%); }
-      .main { margin-left:0; }
-      .content { padding:14px; }
-      .g3,.g4 { grid-template-columns:1fr 1fr; }
-    }
-  </style>
+        /* Computed CPB field */
+        .cpb-field {
+            height:35px;background:#fffbeb;border:1px dashed #fde68a;
+            border-radius:var(--r-sm);font-size:13px;font-weight:700;
+            padding:0 10px;color:var(--amber);display:flex;align-items:center;
+        }
+
+        /* Column dividers inside row 2 */
+        .col-divider {
+            width:1px;background:var(--bdr);margin:0 4px;align-self:stretch;
+        }
+
+        /* Subtle group bg tints inside row 2 */
+        .case-grp { background:#fffdf5;border-radius:var(--r-sm);padding:10px 12px;display:grid;grid-template-columns:0.8fr 1fr 0.9fr;gap:10px; }
+        .tax-grp  { background:#fefaff;border-radius:var(--r-sm);padding:10px 12px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px; }
+        .misc-grp { background:var(--sur2);border-radius:var(--r-sm);padding:10px 12px;display:grid;grid-template-columns:1fr;gap:10px; }
+
+        /* Override row2 grid for groups */
+        .sz-row2 { grid-template-columns:1fr 1px 1fr 1px 0.6fr;gap:0;padding:0; }
+        .sz-row2 .case-grp,.sz-row2 .tax-grp,.sz-row2 .misc-grp { border-radius:0; }
+        .sz-row2 .divider { width:1px;background:var(--bdr);margin:10px 0; }
+
+        /* ── BUTTONS ─────────────────────────────────────── */
+        .btn {
+            display:inline-flex;align-items:center;gap:6px;
+            font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-weight:600;
+            border:none;border-radius:var(--r-sm);cursor:pointer;
+            transition:all .15s;text-decoration:none;white-space:nowrap;line-height:1;
+        }
+        .btn-p   { background:var(--blue);color:#fff;font-size:13px;padding:0 20px;height:36px;box-shadow:0 1px 3px rgba(59,109,234,.3); }
+        .btn-p:hover { background:var(--blue-dk); }
+        .btn-add { background:var(--blue-lt);color:var(--blue-dk);border:1px solid var(--blue-mid);font-size:13px;padding:0 14px;height:34px; }
+        .btn-add:hover { background:#dce9fb; }
+        .btn-sec { background:var(--sur);color:var(--txt2);border:1px solid var(--bdr-dk);font-size:13px;padding:0 16px;height:36px; }
+        .btn-sec:hover { background:var(--bg); }
+
+        /* ── STICKY FOOTER ───────────────────────────────── */
+        .form-footer {
+            position:sticky;bottom:0;background:var(--sur);border-top:1px solid var(--bdr);
+            padding:12px 28px;display:flex;align-items:center;justify-content:space-between;
+            z-index:40;box-shadow:0 -2px 10px rgba(0,0,0,.06);
+        }
+
+        /* ── ANIMATIONS ──────────────────────────────────── */
+        .fi  { animation:fup .35s ease both; }
+        .fi2 { animation:fup .35s .07s ease both; }
+        .fi3 { animation:fup .35s .14s ease both; }
+        @keyframes fup { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+        /* ── EMPTY STATE ─────────────────────────────────── */
+        .sz-empty {
+            text-align:center;padding:32px 20px;color:var(--txt3);font-size:13px;
+        }
+        .sz-empty-ico { font-size:28px;opacity:.3;display:block;margin-bottom:8px; }
+
+        @media (max-width:960px) {
+            .sb { transform:translateX(-100%); }
+            .main { margin-left:0; }
+            .content { padding:16px; }
+            .g4,.g3 { grid-template-columns:repeat(2,1fr); }
+            .g2 { grid-template-columns:1fr; }
+            .sp2 { grid-column:span 1; }
+            .sz-row1 { grid-template-columns:repeat(3,1fr); }
+            .sz-row2 { grid-template-columns:1fr; }
+            .sz-row2 .divider { display:none; }
+            .sz-row2 .case-grp,.sz-row2 .tax-grp,.sz-row2 .misc-grp { grid-template-columns:repeat(2,1fr); }
+        }
+    </style>
 </head>
 <body>
 
 <!-- SIDEBAR -->
 <aside class="sb">
-  <div class="sb-logo">
-    <div class="sb-ico">&#127862;</div>
-    <span class="sb-name">BarInventory</span>
-    <span class="sb-tag">ADMIN</span>
-  </div>
-  <nav class="sb-nav">
-    <div class="sb-grp">
-      <div class="sb-grp-lbl">Overview</div>
-      <a href="#" class="sb-lnk">&#9647; Dashboard</a>
-      <a href="#" class="sb-lnk">&#128202; Reports</a>
+    <div class="sb-logo">
+        <div class="sb-ico">🍶</div>
+        <span class="sb-name">BarInventory</span>
+        <span class="sb-tag">ADMIN</span>
     </div>
-    <div class="sb-grp">
-      <div class="sb-grp-lbl">Inventory</div>
-      <a th:href="@{/admin/brands}" class="sb-lnk on">&#127991; Brands</a>
-      <a href="#" class="sb-lnk">&#128230; Stock</a>
-      <a href="#" class="sb-lnk">&#128281; Purchases</a>
-      <a href="#" class="sb-lnk">&#128282; Sales</a>
+    <nav class="sb-nav">
+        <div class="sb-grp">
+            <div class="sb-grp-lbl">Overview</div>
+            <a href="#" class="sb-lnk"><span class="sb-lnk-ico">▣</span> Dashboard</a>
+            <a href="#" class="sb-lnk"><span class="sb-lnk-ico">📊</span> Reports</a>
+        </div>
+        <div class="sb-grp">
+            <div class="sb-grp-lbl">Inventory</div>
+            <a th:href="@{/admin/brands}" class="sb-lnk on"><span class="sb-lnk-ico">🏷</span> Brands</a>
+            <a href="#" class="sb-lnk"><span class="sb-lnk-ico">📦</span> Stock</a>
+            <a href="#" class="sb-lnk"><span class="sb-lnk-ico">📥</span> Purchases</a>
+            <a href="#" class="sb-lnk"><span class="sb-lnk-ico">📤</span> Sales</a>
+        </div>
+        <div class="sb-grp">
+            <div class="sb-grp-lbl">Management</div>
+            <a href="#" class="sb-lnk"><span class="sb-lnk-ico">🏪</span> Suppliers</a>
+            <a href="#" class="sb-lnk"><span class="sb-lnk-ico">👥</span> Users</a>
+            <a href="#" class="sb-lnk"><span class="sb-lnk-ico">⚙</span> Settings</a>
+        </div>
+    </nav>
+    <div class="sb-foot">
+        <div class="sb-usr">
+            <div class="sb-av">AD</div>
+            <div><div class="sb-un">Admin</div><div class="sb-ur">Administrator</div></div>
+        </div>
     </div>
-    <div class="sb-grp">
-      <div class="sb-grp-lbl">Management</div>
-      <a href="#" class="sb-lnk">&#127978; Suppliers</a>
-      <a href="#" class="sb-lnk">&#128101; Users</a>
-      <a href="#" class="sb-lnk">&#9881; Settings</a>
-    </div>
-  </nav>
-  <div class="sb-foot">
-    <div class="sb-usr">
-      <div class="sb-av">AD</div>
-      <div><div class="sb-un">Admin</div><div class="sb-ur">Administrator</div></div>
-    </div>
-  </div>
 </aside>
 
 <!-- MAIN -->
 <div class="main">
+    <header class="topbar">
+        <a th:href="@{/admin/brands}" class="tb-back">← Brands</a>
+        <span class="tb-sep">/</span>
+        <span class="tb-title" th:text="${isEdit} ? 'Edit Brand' : 'Add New Brand'">Brand Form</span>
+        <div class="tb-right">
+            <span style="font-size:12px;color:var(--txt3)"
+                  th:text="${isEdit} ? 'Editing — ' + ${brandFormDTO.brandName} : 'New registration'"></span>
+        </div>
+    </header>
 
-  <header class="topbar">
-    <div class="bc">
-      <a th:href="@{/admin/brands}">Brands</a>
-      <span class="bc-sep">&rsaquo;</span>
-      <span class="bc-cur" th:text="${isEdit} ? 'Edit Brand' : 'New Brand'">New Brand</span>
-    </div>
-  </header>
-
-  <div class="content">
-
-    <div th:if="${errorMsg}"   class="flash f-err">&#9888; <span th:text="${errorMsg}"></span></div>
-    <div th:if="${successMsg}" class="flash f-ok">&#10003; <span th:text="${successMsg}"></span></div>
-
-    <form th:action="${brandFormDTO.id == null
-                        ? '/admin/brands/new-with-sizes'
-                        : '/admin/brands/' + brandFormDTO.id + '/edit'}"
+    <!--
+        ONE FORM — brand fields + all size cards — submitted together.
+        CREATE → POST /admin/brands/new-with-sizes
+        EDIT   → POST /admin/brands/{id}/edit
+    -->
+    <form th:action="${isEdit}
+                      ? @{'/admin/brands/' + ${brandFormDTO.id} + '/edit'}
+                      : @{/admin/brands/new-with-sizes}"
+          method="post"
           th:object="${brandFormDTO}"
-          method="post" id="brandForm" novalidate>
+          id="brandForm">
 
-      <input type="hidden" th:field="*{id}"/>
+        <div class="content">
 
-      <!-- ① IDENTITY -->
-      <div class="card">
-        <div class="card-head">
-          <div class="ch-ico blue">&#127991;</div>
-          <div>
-            <div class="ch-title">Brand Identity</div>
-            <div class="ch-desc">Core identification — stored in the brands table</div>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="gr g4">
-            <div>
-              <label class="lbl">Brand Code <span class="req">*</span></label>
-              <input th:field="*{brandCode}" class="inp mono" placeholder="WHK-001" maxlength="20" required/>
-              <div class="hint">Unique, auto-uppercased on save</div>
-            </div>
-            <div>
-              <label class="lbl">Brand Name <span class="req">*</span></label>
-              <input th:field="*{brandName}" class="inp" placeholder="e.g. Royal Stag" required/>
-            </div>
-            <div>
-              <label class="lbl">Parent Company</label>
-              <input th:field="*{parentCompany}" class="inp" placeholder="e.g. Pernod Ricard India"/>
-            </div>
-            <div>
-              <label class="lbl">Excise Code</label>
-              <input th:field="*{exciseCode}" class="inp mono" placeholder="EX-12345"/>
-            </div>
-          </div>
-          <div class="gr g4">
-            <div>
-              <label class="lbl">Category <span class="req">*</span></label>
-              <select th:field="*{category}" class="sel">
-                <option value="">-- Select --</option>
-                <option th:each="cat : ${categories}"
-                        th:value="${cat}"
-                        th:text="${cat}">
-                </option>
-              </select>
-            </div>
-            <div>
-              <label class="lbl">Sub Category</label>
-              <select th:field="*{subCategory}" class="sel">
-                <option value="">-- Select --</option>
-                <option th:each="sc : ${subCategories}"
-                        th:value="${sc}"
-                        th:text="${sc.name().replace('_',' ')}">
-                </option>
-              </select>
-            </div>
-            <div class="tgl-wrap">
-              <label class="tgl">
-                <input type="checkbox" th:field="*{active}"/>
-                <span class="tgl-s"></span>
-              </label>
-              <span class="tgl-lbl">Brand Active</span>
-            </div>
-          </div>
-        </div>
-      </div>
+            <div th:if="${errorMsg}"   class="flash f-err fi"><span>⚠</span><span th:text="${errorMsg}"></span></div>
+            <div th:if="${successMsg}" class="flash f-ok  fi"><span>✓</span><span th:text="${successMsg}"></span></div>
 
-      <!-- ② TAX -->
-      <div class="card">
-        <div class="card-head">
-          <div class="ch-ico amber">&#128203;</div>
-          <div>
-            <div class="ch-title">Tax &amp; Regulatory &mdash; Brand Defaults</div>
-            <div class="ch-desc">Applied to all sizes unless overridden per row below</div>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="gr g3">
-            <div>
-              <label class="lbl">Excise Cess %</label>
-              <div class="ig">
-                <input th:field="*{exciseCessPercent}" type="number" step="0.01" min="0" max="100" class="inp" placeholder="0.00"/>
-                <span class="ig-sfx">%</span>
-              </div>
+            <div class="pg-head fi">
+                <div>
+                    <h1 class="pg-title" th:text="${isEdit} ? 'Edit Brand' : 'Register New Brand'">Brand</h1>
+                    <p class="pg-desc">Brand info &amp; sizes saved together in one submit.</p>
+                </div>
             </div>
-            <div>
-              <label class="lbl">TCS % <span style="font-size:10px;color:var(--txt3)">(Tax Collected at Source)</span></label>
-              <div class="ig">
-                <input th:field="*{tcsPercent}" type="number" step="0.01" min="0" max="100" class="inp" placeholder="0.00"/>
-                <span class="ig-sfx">%</span>
-              </div>
-            </div>
-            <div>
-              <label class="lbl">GST %</label>
-              <div class="ig">
-                <input th:field="*{gstPercent}" type="number" step="0.01" min="0" max="100" class="inp" placeholder="0.00"/>
-                <span class="ig-sfx">%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- ③ SIZES -->
-      <div class="card">
-        <div class="card-head">
-          <div class="ch-ico green">&#128208;</div>
-          <div>
-            <div class="ch-title">Sizes &amp; Pricing</div>
-            <div class="ch-desc">One row per SKU. Leave tax columns blank to inherit brand defaults above.</div>
-          </div>
+            <!-- ══ CARD 1: Brand Identity ═══════════════════ -->
+            <div class="sc fi2">
+                <div class="sc-head">
+                    <div class="sc-head-l">
+                        <span class="sc-ico">🏷</span>
+                        <span class="sc-title">Brand Identity</span>
+                    </div>
+                    <span class="sc-desc">Required: Brand Code &amp; Name</span>
+                </div>
+                <div class="sc-body">
+                    <div class="fg g4">
+                        <div class="fld">
+                            <label>Brand Code <span class="req">*</span></label>
+                            <input type="text" th:field="*{brandCode}" class="inp"
+                                   placeholder="BLP001" maxlength="20" required
+                                   oninput="this.value=this.value.toUpperCase()">
+                            <span class="hint">Unique · max 20 chars</span>
+                        </div>
+                        <div class="fld sp2">
+                            <label>Brand Name <span class="req">*</span></label>
+                            <input type="text" th:field="*{brandName}" class="inp"
+                                   placeholder="e.g. Blenders Pride" required>
+                        </div>
+                        <div class="fld">
+                            <label>Parent Company <span class="opt">optional</span></label>
+                            <input type="text" th:field="*{parentCompany}" class="inp"
+                                   placeholder="e.g. Pernod Ricard">
+                        </div>
+                    </div>
+                    <div class="fg g4">
+                        <div class="fld">
+                            <label>Category <span class="opt">optional</span></label>
+                            <select th:field="*{category}" class="sel">
+                                <option value="">— Select —</option>
+                                <option th:each="c : ${categories}" th:value="${c}" th:text="${c}"></option>
+                            </select>
+                        </div>
+                        <div class="fld">
+                            <label>Sub-Category <span class="opt">optional</span></label>
+                            <select th:field="*{subCategory}" class="sel">
+                                <option value="">— Select —</option>
+                                <option th:each="s : ${subCategories}" th:value="${s}" th:text="${s}"></option>
+                            </select>
+                        </div>
+                        <div class="fld">
+                            <label>Excise Code <span class="opt">optional</span></label>
+                            <input type="text" th:field="*{exciseCode}" class="inp" placeholder="State excise code">
+                        </div>
+                        <div class="fld">
+                            <label>Status</label>
+                            <select th:field="*{active}" class="sel">
+                                <option value="true">✅ Active</option>
+                                <option value="false">❌ Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ CARD 2: Tax Defaults ══════════════════════ -->
+            <div class="sc fi2">
+                <div class="sc-head">
+                    <div class="sc-head-l">
+                        <span class="sc-ico">🏛</span>
+                        <span class="sc-title">Tax Defaults</span>
+                    </div>
+                    <span class="sc-desc">Brand-wide · overridable per size</span>
+                </div>
+                <div class="sc-body">
+                    <div class="fg g3">
+                        <div class="fld">
+                            <label>GST % <span class="opt">optional</span></label>
+                            <input type="number" step="0.01" th:field="*{gstPercent}"
+                                   class="inp" placeholder="18.00" min="0" max="100">
+                        </div>
+                        <div class="fld">
+                            <label>Excise Cess % <span class="opt">optional</span></label>
+                            <input type="number" step="0.01" th:field="*{exciseCessPercent}"
+                                   class="inp" placeholder="0.00" min="0" max="100">
+                        </div>
+                        <div class="fld">
+                            <label>TCS % <span class="opt">optional</span></label>
+                            <input type="number" step="0.01" th:field="*{tcsPercent}"
+                                   class="inp" placeholder="0.10" min="0" max="100">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ CARD 3: Sizes ═════════════════════════════ -->
+            <div class="sizes-wrap fi3">
+
+                <div class="sizes-header">
+                    <div class="sizes-header-l">
+                        <span class="sc-ico">📐</span>
+                        <span class="sc-title">Sizes &amp; Pricing</span>
+                        <span class="sc-badge" id="sizeCountBadge">0</span>
+                    </div>
+                    <span class="sc-desc">One card per bottle size — 750ml, 375ml, 180ml…</span>
+                </div>
+
+                <!-- Size cards container -->
+                <div class="sizes-body" id="sizesContainer">
+
+                    <!--
+                        Thymeleaf renders existing sizes (create = 1 blank row, edit = pre-filled).
+                        JS clones packaging/rounding <select> options from first rendered card
+                        when adding new rows — avoids enum strings in JS (the CDATA bug fix).
+                    -->
+                    <div th:each="size, stat : *{sizes}"
+                         th:id="'sz-' + ${stat.index}"
+                         class="sz-card">
+
+                        <!-- Card top bar -->
+                        <div class="sz-card-bar">
+                            <span class="sz-num" th:id="'rn-' + ${stat.index}" th:text="${stat.count}"></span>
+                            <span class="sz-preview" th:id="'prev-' + ${stat.index}">
+                                <span th:text="${size.sizeLabel != null && !size.sizeLabel.isEmpty()} ? ${size.sizeLabel} : 'New Size'"></span>
+                                <span class="sz-preview-sub"
+                                      th:text="${size.packaging != null} ? ${size.packaging} : ''"></span>
+                            </span>
+                            <button type="button" class="btn-rm"
+                                    th:onclick="'removeCard(' + ${stat.index} + ')'">✕ Remove</button>
+                        </div>
+
+                        <!-- ── ROW 1: Identity + Pricing ──── -->
+                        <div class="sz-row1">
+
+                            <div class="fld">
+                                <label>Size Label <span class="req">*</span></label>
+                                <input type="text"
+                                       th:name="'sizes[' + ${stat.index} + '].sizeLabel'"
+                                       th:value="${size.sizeLabel}"
+                                       class="inp sz-label-inp"
+                                       th:id="'lbl-' + ${stat.index}"
+                                       th:data-idx="${stat.index}"
+                                       placeholder="e.g. 750ml"
+                                       oninput="updatePreview(this.dataset.idx)">
+                            </div>
+
+                            <div class="fld">
+                                <label>Volume ml <span class="opt">opt</span></label>
+                                <input type="number"
+                                       th:name="'sizes[' + ${stat.index} + '].volumeMl'"
+                                       th:value="${size.volumeMl}"
+                                       class="inp" placeholder="750" min="1">
+                            </div>
+
+                            <div class="fld">
+                                <label>Packaging <span class="opt">opt</span></label>
+                                <select th:name="'sizes[' + ${stat.index} + '].packaging'"
+                                        class="sel sz-pkg-sel"
+                                        th:id="'pkg-' + ${stat.index}"
+                                        th:data-idx="${stat.index}"
+                                        onchange="updatePreview(this.dataset.idx)">
+                                    <option value="">—</option>
+                                    <option th:each="p : ${packagingOptions}"
+                                            th:value="${p}" th:text="${p}"
+                                            th:selected="${size.packaging == p}"></option>
+                                </select>
+                            </div>
+
+                            <div class="fld">
+                                <label>Selling Price ₹ <span class="opt">opt</span></label>
+                                <input type="number" step="0.01"
+                                       th:name="'sizes[' + ${stat.index} + '].sellingPrice'"
+                                       th:value="${size.sellingPrice}"
+                                       class="inp" placeholder="0.00" min="0">
+                            </div>
+
+                            <div class="fld">
+                                <label>MRP ₹ <span class="opt">opt</span></label>
+                                <input type="number" step="0.01"
+                                       th:name="'sizes[' + ${stat.index} + '].mrp'"
+                                       th:value="${size.mrp}"
+                                       class="inp" placeholder="0.00" min="0">
+                            </div>
+
+                            <div class="fld">
+                                <label>MRP Rounding <span class="opt">opt</span></label>
+                                <select th:name="'sizes[' + ${stat.index} + '].mrpRounding'" class="sel">
+                                    <option value="">— None —</option>
+                                    <option th:each="r : ${roundingOptions}"
+                                            th:value="${r}" th:text="${r}"
+                                            th:selected="${size.mrpRounding == r}"></option>
+                                </select>
+                            </div>
+
+                        </div><!-- /sz-row1 -->
+
+                        <!-- ── ROW 2: Case + Tax + Barcode ── -->
+                        <div class="sz-row2">
+
+                            <!-- Case group -->
+                            <div class="case-grp">
+                                <div class="fld" style="grid-column:1/-1;margin-bottom:2px">
+                                    <span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--amber)">📦 Case (Depot)</span>
+                                </div>
+                                <div class="fld">
+                                    <label>Btl / Case <span class="opt">opt</span></label>
+                                    <input type="number"
+                                           th:name="'sizes[' + ${stat.index} + '].bottlesPerCase'"
+                                           th:value="${size.bottlesPerCase}"
+                                           class="inp"
+                                           th:id="'btl-' + ${stat.index}"
+                                           th:data-idx="${stat.index}"
+                                           placeholder="12" min="1"
+                                           oninput="calcCPB(this.dataset.idx)">
+                                    <span class="hint">750→12 · 375→24 · 180→48 · 90→96</span>
+                                </div>
+                                <div class="fld">
+                                    <label>Case Price ₹ <span class="opt">opt</span></label>
+                                    <input type="number" step="0.01"
+                                           th:name="'sizes[' + ${stat.index} + '].casePrice'"
+                                           th:value="${size.casePrice}"
+                                           class="inp"
+                                           th:id="'cpx-' + ${stat.index}"
+                                           th:data-idx="${stat.index}"
+                                           placeholder="6000.00" min="0"
+                                           oninput="calcCPB(this.dataset.idx)">
+                                    <span class="hint">Full case from depot</span>
+                                </div>
+                                <div class="fld">
+                                    <label>Cost / Bottle</label>
+                                    <div class="cpb-field" th:id="'cpb-' + ${stat.index}">—</div>
+                                    <span class="hint">Auto · Case ÷ Btl</span>
+                                </div>
+                            </div>
+
+                            <div class="divider"></div>
+
+                            <!-- Tax group -->
+                            <div class="tax-grp">
+                                <div class="fld" style="grid-column:1/-1;margin-bottom:2px">
+                                    <span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#9b6bb5">🏛 Tax (overrides brand default)</span>
+                                </div>
+                                <div class="fld">
+                                    <label>GST % <span class="opt">opt</span></label>
+                                    <input type="number" step="0.01"
+                                           th:name="'sizes[' + ${stat.index} + '].gstPercent'"
+                                           th:value="${size.gstPercent}"
+                                           class="inp" placeholder="inherit" min="0" max="100">
+                                </div>
+                                <div class="fld">
+                                    <label>Exc Cess % <span class="opt">opt</span></label>
+                                    <input type="number" step="0.01"
+                                           th:name="'sizes[' + ${stat.index} + '].exciseCessPercent'"
+                                           th:value="${size.exciseCessPercent}"
+                                           class="inp" placeholder="inherit" min="0" max="100">
+                                </div>
+                                <div class="fld">
+                                    <label>TCS % <span class="opt">opt</span></label>
+                                    <input type="number" step="0.01"
+                                           th:name="'sizes[' + ${stat.index} + '].tcsPercent'"
+                                           th:value="${size.tcsPercent}"
+                                           class="inp" placeholder="inherit" min="0" max="100">
+                                </div>
+                                <div class="fld">
+                                    <label>ABV % <span class="opt">opt</span></label>
+                                    <input type="number" step="0.1"
+                                           th:name="'sizes[' + ${stat.index} + '].abvPercent'"
+                                           th:value="${size.abvPercent}"
+                                           class="inp" placeholder="42.8" min="0" max="100">
+                                </div>
+                            </div>
+
+                            <div class="divider"></div>
+
+                            <!-- Misc: Barcode only (HSN removed per request) -->
+                            <div class="misc-grp">
+                                <div class="fld" style="margin-bottom:2px">
+                                    <span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--txt4)">Misc</span>
+                                </div>
+                                <div class="fld">
+                                    <label>Barcode <span class="opt">opt</span></label>
+                                    <input type="text"
+                                           th:name="'sizes[' + ${stat.index} + '].barcode'"
+                                           th:value="${size.barcode}"
+                                           class="inp" placeholder="EAN / UPC">
+                                </div>
+                            </div>
+
+                        </div><!-- /sz-row2 -->
+
+                    </div><!-- /sz-card (th:each) -->
+
+                    <!-- Empty state when no sizes exist -->
+                    <div class="sz-empty" id="szEmpty" style="display:none">
+                        <span class="sz-empty-ico">📐</span>
+                        Click "+ Add Size" to add your first bottle size
+                    </div>
+
+                </div><!-- /sizes-body -->
+
+                <div class="sizes-footer">
+                    <button type="button" class="btn btn-add" onclick="addCard()">
+                        + Add Size
+                    </button>
+                    <span class="sz-tip">Purchase price = Case Price ÷ Bottles per Case (computed automatically)</span>
+                </div>
+
+            </div><!-- /sizes-wrap -->
+
+        </div><!-- /content -->
+
+        <!-- Sticky footer -->
+        <div class="form-footer">
+            <div style="font-size:12px;color:var(--txt3)"
+                 th:text="${isEdit} ? 'Editing: ' + ${brandFormDTO.brandName} : 'New brand — fill details and save'">
+            </div>
+            <div style="display:flex;gap:10px">
+                <a th:href="@{/admin/brands}" class="btn btn-sec">Cancel</a>
+                <button type="submit" class="btn btn-p"
+                        th:text="${isEdit} ? '💾 Save Changes' : '✓ Create Brand'">Save</button>
+            </div>
         </div>
-        <div class="card-body" style="padding-bottom:10px;">
-          <div class="sz-scroll">
-            <table id="szTable">
-              <thead>
-                <tr>
-                  <th style="min-width:78px;">Label</th>
-                  <th style="min-width:62px;">ml</th>
-                  <th style="min-width:112px;">Packaging</th>
-                  <th style="min-width:105px;">Purchase &#8377;</th>
-                  <th style="min-width:105px;">Selling &#8377;</th>
-                  <th style="min-width:98px;">MRP &#8377;</th>
-                  <th style="min-width:118px;">MRP Rounding</th>
-                  <th style="min-width:82px;">Excise %</th>
-                  <th style="min-width:72px;">TCS %</th>
-                  <th style="min-width:72px;">GST %</th>
-                  <th style="min-width:62px;">ABV %</th>
-                  <th style="min-width:105px;">Barcode</th>
-                  <th style="min-width:85px;">HSN Code</th>
-                  <th style="min-width:52px;">Order</th>
-                  <th style="min-width:48px;">Active</th>
-                  <th style="width:32px;"></th>
-                </tr>
-              </thead>
-              <tbody id="szBody">
-                <!-- Thymeleaf renders server-side rows (edit mode) -->
-                <tr class="sz-row" th:each="row,stat : *{sizes}">
-                  <td><input type="text"   th:field="*{sizes[__${stat.index}__].sizeLabel}"          class="inp"      placeholder="750ml"/></td>
-                  <td><input type="number" th:field="*{sizes[__${stat.index}__].volumeMl}"            class="inp"      placeholder="750"   min="1"/></td>
-                  <td>
-                    <select th:field="*{sizes[__${stat.index}__].packaging}" class="sel">
-                      <option value="">--</option>
-                      <option th:each="p : ${packagingOptions}" th:value="${p}" th:text="${p.name().replace('_',' ')}"></option>
-                    </select>
-                  </td>
-                  <td><div class="ig"><span class="ig-pfx">&#8377;</span><input type="number" th:field="*{sizes[__${stat.index}__].purchasePrice}" class="inp" step="0.01"/></div></td>
-                  <td><div class="ig"><span class="ig-pfx">&#8377;</span><input type="number" th:field="*{sizes[__${stat.index}__].sellingPrice}"  class="inp" step="0.01"/></div></td>
-                  <td><div class="ig"><span class="ig-pfx">&#8377;</span><input type="number" th:field="*{sizes[__${stat.index}__].mrp}"           class="inp" step="0.01"/></div></td>
-                  <td>
-                    <select th:field="*{sizes[__${stat.index}__].mrpRounding}" class="sel">
-                      <option value="">None</option>
-                      <option th:each="r : ${roundingOptions}" th:value="${r}" th:text="${r.name().replace('_',' ')}"></option>
-                    </select>
-                  </td>
-                  <td><input type="number" th:field="*{sizes[__${stat.index}__].exciseCessPercent}" class="inp" step="0.01" placeholder="inherit"/></td>
-                  <td><input type="number" th:field="*{sizes[__${stat.index}__].tcsPercent}"        class="inp" step="0.01" placeholder="inherit"/></td>
-                  <td><input type="number" th:field="*{sizes[__${stat.index}__].gstPercent}"        class="inp" step="0.01" placeholder="inherit"/></td>
-                  <td><input type="number" th:field="*{sizes[__${stat.index}__].abvPercent}"        class="inp" step="0.1"  placeholder="42.8"/></td>
-                  <td><input type="text"   th:field="*{sizes[__${stat.index}__].barcode}"           class="inp mono" placeholder="8901..."/></td>
-                  <td><input type="text"   th:field="*{sizes[__${stat.index}__].hsnCode}"           class="inp mono" placeholder="2208"/></td>
-                  <td><input type="number" th:field="*{sizes[__${stat.index}__].displayOrder}"      class="inp"      min="0" placeholder="0"/></td>
-                  <td style="text-align:center;">
-                    <label class="tgl" style="width:34px;height:19px;">
-                      <input type="checkbox" th:field="*{sizes[__${stat.index}__].active}"/>
-                      <span class="tgl-s"></span>
-                    </label>
-                  </td>
-                  <td><button type="button" class="del-sz" title="Remove">&#x2715;</button></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <button type="button" class="add-sz" id="addSzBtn">&#xff0b; Add Size Row</button>
-        </div>
-      </div>
 
     </form>
-  </div>
-
-  <!-- SAVE BAR -->
-  <div class="save-bar">
-    <button type="submit" form="brandForm" class="btn btn-p">
-      <span th:text="${isEdit} ? 'Save Changes' : 'Create Brand'">Save</span>
-    </button>
-    <a th:href="@{/admin/brands}" class="btn btn-s">Cancel</a>
-    <span class="sz-ct" id="szCt">0 size(s)</span>
-  </div>
-
-</div><!-- /main -->
+</div>
 
 <!--
-  ✅ FIX: th:inline="none" tells Thymeleaf to NOT process this script block at all.
-     Without this, Thymeleaf's inline parser tries to evaluate JS array syntax
-     like [['GLASS_BOTTLE','Glass Bottle']] as Thymeleaf expressions → parse error.
+    JS: addCard / removeCard / reindex / calcCPB / updatePreview / badge
+
+    CDATA FIX (same as before):
+    JS never holds enum option strings.
+    addCard() clones <option> HTML from the first Thymeleaf-rendered
+    <select> already in the DOM — zero Thymeleaf expressions in JS.
 -->
-<script th:inline="none">
-/*<![CDATA[*/
-(function(){
-  var body   = document.getElementById('szBody');
-  var addBtn = document.getElementById('addSzBtn');
-  var ct     = document.getElementById('szCt');
+<script>
+    var totalCards = 0;
 
-  /* Packaging options matching BrandSize.Packaging enum */
-  var PKG = [
-    ['', '--'],
-    ['GLASS_BOTTLE', 'Glass Bottle'],
-    ['PET', 'PET'],
-    ['CAN', 'Can'],
-    ['TETRA', 'Tetra'],
-    ['KEG', 'Keg']
-  ];
+    document.addEventListener('DOMContentLoaded', function () {
+        totalCards = document.querySelectorAll('#sizesContainer .sz-card').length;
+        updateBadge();
+        for (var i = 0; i < totalCards; i++) {
+            calcCPB(i);
+        }
+        updateEmptyState();
+    });
 
-  /* MrpRounding options matching BrandSize.MrpRounding enum */
-  var RND = [
-    ['', 'None'],
-    ['ROUND_UP', 'Round Up'],
-    ['ROUND_DOWN', 'Round Down'],
-    ['NEAREST_5', 'Nearest 5'],
-    ['NEAREST_10', 'Nearest 10']
-  ];
-
-  function mkSel(name, opts) {
-    var html = '<select name="' + name + '" class="sel">';
-    for (var i = 0; i < opts.length; i++) {
-      html += '<option value="' + opts[i][0] + '">' + opts[i][1] + '</option>';
+    /* Clone <option> list from first rendered select — no enum strings in JS */
+    function getOptsHTML(selector) {
+        var sel = document.querySelector('#sizesContainer .sz-card:first-child ' + selector);
+        return sel ? sel.innerHTML : '<option value="">—</option>';
     }
-    html += '</select>';
-    return html;
-  }
 
-  function mkInp(type, name, ph, extra) {
-    return '<input type="' + type + '" name="' + name + '" class="inp" placeholder="' + ph + '" ' + (extra || '') + '>';
-  }
+    function addCard() {
+        var i       = totalCards;
+        var pkgOpts = getOptsHTML('select.sz-pkg-sel');
+        var rndOpts = getOptsHTML('select[name$=".mrpRounding"]');
 
-  function addRow() {
-    var i = body.querySelectorAll('tr.sz-row').length;
-    function p(f) { return 'sizes[' + i + '].' + f; }
+        var card = document.createElement('div');
+        card.className = 'sz-card';
+        card.id = 'sz-' + i;
+        card.innerHTML =
+            /* top bar */
+            '<div class="sz-card-bar">' +
+                '<span class="sz-num" id="rn-' + i + '">' + (i + 1) + '</span>' +
+                '<span class="sz-preview" id="prev-' + i + '">New Size</span>' +
+                '<button type="button" class="btn-rm" onclick="removeCard(' + i + ')">&#x2715; Remove</button>' +
+            '</div>' +
 
-    var tr = document.createElement('tr');
-    tr.className = 'sz-row';
-    tr.innerHTML =
-      '<td>' + mkInp('text',   p('sizeLabel'),         '750ml', '') + '</td>' +
-      '<td>' + mkInp('number', p('volumeMl'),           '750',   'min="1"') + '</td>' +
-      '<td>' + mkSel(p('packaging'), PKG) + '</td>' +
-      '<td><div class="ig"><span class="ig-pfx">&#8377;</span>' + mkInp('number', p('purchasePrice'), '0.00', 'step="0.01"') + '</div></td>' +
-      '<td><div class="ig"><span class="ig-pfx">&#8377;</span>' + mkInp('number', p('sellingPrice'),  '0.00', 'step="0.01"') + '</div></td>' +
-      '<td><div class="ig"><span class="ig-pfx">&#8377;</span>' + mkInp('number', p('mrp'),           '0.00', 'step="0.01"') + '</div></td>' +
-      '<td>' + mkSel(p('mrpRounding'), RND) + '</td>' +
-      '<td>' + mkInp('number', p('exciseCessPercent'), 'inherit', 'step="0.01"') + '</td>' +
-      '<td>' + mkInp('number', p('tcsPercent'),        'inherit', 'step="0.01"') + '</td>' +
-      '<td>' + mkInp('number', p('gstPercent'),        'inherit', 'step="0.01"') + '</td>' +
-      '<td>' + mkInp('number', p('abvPercent'),        '42.8',    'step="0.1"')  + '</td>' +
-      '<td>' + mkInp('text',   p('barcode'),           '8901...', '') + '</td>' +
-      '<td>' + mkInp('text',   p('hsnCode'),           '2208',    '') + '</td>' +
-      '<td>' + mkInp('number', p('displayOrder'),      '0',       'min="0"') + '</td>' +
-      '<td style="text-align:center;">' +
-        '<label class="tgl" style="width:34px;height:19px;">' +
-          '<input type="checkbox" name="' + p('active') + '" checked>' +
-          '<span class="tgl-s"></span>' +
-        '</label>' +
-      '</td>' +
-      '<td><button type="button" class="del-sz">&#x2715;</button></td>';
+            /* row 1: identity + pricing */
+            '<div class="sz-row1">' +
+                '<div class="fld"><label>Size Label <span class="req">*</span></label>' +
+                    '<input type="text" name="sizes[' + i + '].sizeLabel" class="inp sz-label-inp" id="lbl-' + i + '" data-idx="' + i + '" placeholder="e.g. 750ml" oninput="updatePreview(this.dataset.idx)"></div>' +
+                '<div class="fld"><label>Volume ml <span class="opt">opt</span></label>' +
+                    '<input type="number" name="sizes[' + i + '].volumeMl" class="inp" placeholder="750" min="1"></div>' +
+                '<div class="fld"><label>Packaging <span class="opt">opt</span></label>' +
+                    '<select name="sizes[' + i + '].packaging" class="sel sz-pkg-sel" id="pkg-' + i + '" data-idx="' + i + '" onchange="updatePreview(this.dataset.idx)">' + pkgOpts + '</select></div>' +
+                '<div class="fld"><label>Selling Price &#x20B9; <span class="opt">opt</span></label>' +
+                    '<input type="number" step="0.01" name="sizes[' + i + '].sellingPrice" class="inp" placeholder="0.00" min="0"></div>' +
+                '<div class="fld"><label>MRP &#x20B9; <span class="opt">opt</span></label>' +
+                    '<input type="number" step="0.01" name="sizes[' + i + '].mrp" class="inp" placeholder="0.00" min="0"></div>' +
+                '<div class="fld"><label>MRP Rounding <span class="opt">opt</span></label>' +
+                    '<select name="sizes[' + i + '].mrpRounding" class="sel">' + rndOpts + '</select></div>' +
+            '</div>' +
 
-    body.appendChild(tr);
-    reindex();
-  }
+            /* row 2: case + tax + misc */
+            '<div class="sz-row2">' +
+                '<div class="case-grp">' +
+                    '<div class="fld" style="grid-column:1/-1;margin-bottom:2px"><span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--amber)">&#x1F4E6; Case (Depot)</span></div>' +
+                    '<div class="fld"><label>Btl / Case <span class="opt">opt</span></label>' +
+                        '<input type="number" name="sizes[' + i + '].bottlesPerCase" class="inp" id="btl-' + i + '" data-idx="' + i + '" placeholder="12" min="1" oninput="calcCPB(this.dataset.idx)">' +
+                        '<span class="hint">750&#x2192;12 &middot; 375&#x2192;24 &middot; 180&#x2192;48</span></div>' +
+                    '<div class="fld"><label>Case Price &#x20B9; <span class="opt">opt</span></label>' +
+                        '<input type="number" step="0.01" name="sizes[' + i + '].casePrice" class="inp" id="cpx-' + i + '" data-idx="' + i + '" placeholder="6000.00" min="0" oninput="calcCPB(this.dataset.idx)">' +
+                        '<span class="hint">Full case from depot</span></div>' +
+                    '<div class="fld"><label>Cost / Bottle</label>' +
+                        '<div class="cpb-field" id="cpb-' + i + '">&#x2014;</div>' +
+                        '<span class="hint">Auto &middot; Case &divide; Btl</span></div>' +
+                '</div>' +
+                '<div class="divider"></div>' +
+                '<div class="tax-grp">' +
+                    '<div class="fld" style="grid-column:1/-1;margin-bottom:2px"><span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#9b6bb5">&#x1F3DB; Tax</span></div>' +
+                    '<div class="fld"><label>GST % <span class="opt">opt</span></label><input type="number" step="0.01" name="sizes[' + i + '].gstPercent" class="inp" placeholder="inherit" min="0" max="100"></div>' +
+                    '<div class="fld"><label>Exc Cess % <span class="opt">opt</span></label><input type="number" step="0.01" name="sizes[' + i + '].exciseCessPercent" class="inp" placeholder="inherit" min="0" max="100"></div>' +
+                    '<div class="fld"><label>TCS % <span class="opt">opt</span></label><input type="number" step="0.01" name="sizes[' + i + '].tcsPercent" class="inp" placeholder="inherit" min="0" max="100"></div>' +
+                    '<div class="fld"><label>ABV % <span class="opt">opt</span></label><input type="number" step="0.1" name="sizes[' + i + '].abvPercent" class="inp" placeholder="42.8" min="0" max="100"></div>' +
+                '</div>' +
+                '<div class="divider"></div>' +
+                '<div class="misc-grp">' +
+                    '<div class="fld" style="margin-bottom:2px"><span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--txt4)">Misc</span></div>' +
+                    '<div class="fld"><label>Barcode <span class="opt">opt</span></label><input type="text" name="sizes[' + i + '].barcode" class="inp" placeholder="EAN / UPC"></div>' +
+                '</div>' +
+            '</div>';
 
-  function reindex() {
-    var rows = body.querySelectorAll('tr.sz-row');
-    for (var i = 0; i < rows.length; i++) {
-      var inputs = rows[i].querySelectorAll('[name]');
-      for (var j = 0; j < inputs.length; j++) {
-        inputs[j].name = inputs[j].name.replace(/sizes\[\d+\]/, 'sizes[' + i + ']');
-      }
+        document.getElementById('sizesContainer').appendChild(card);
+        totalCards++;
+        updateBadge();
+        updateEmptyState();
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    var n = rows.length;
-    ct.textContent = n + ' size' + (n !== 1 ? 's' : '') + ' added';
-  }
 
-  addBtn.addEventListener('click', addRow);
+    function removeCard(idx) {
+        var cards = document.querySelectorAll('#sizesContainer .sz-card');
+        if (cards.length <= 1) { alert('At least one size is required.'); return; }
 
-  body.addEventListener('click', function(e) {
-    var btn = e.target.closest('.del-sz');
-    if (btn) {
-      btn.closest('tr').remove();
-      reindex();
+        var card = document.getElementById('sz-' + idx);
+        if (card) card.remove();
+
+        /* Re-index all remaining cards so sizes[0]…sizes[N] are contiguous */
+        var remaining = document.querySelectorAll('#sizesContainer .sz-card');
+        totalCards = remaining.length;
+
+        remaining.forEach(function (card, newIdx) {
+            card.id = 'sz-' + newIdx;
+
+            var rn = card.querySelector('.sz-num');
+            if (rn) { rn.id = 'rn-' + newIdx; rn.textContent = newIdx + 1; }
+
+            var prev = card.querySelector('.sz-preview');
+            if (prev) prev.id = 'prev-' + newIdx;
+
+            var rmBtn = card.querySelector('.btn-rm');
+            if (rmBtn) rmBtn.setAttribute('onclick', 'removeCard(' + newIdx + ')');
+
+            var lblEl = card.querySelector('[id^="lbl-"]');
+            if (lblEl) { lblEl.id = 'lbl-' + newIdx; lblEl.dataset.idx = newIdx; }
+
+            var pkgEl = card.querySelector('[id^="pkg-"]');
+            if (pkgEl) { pkgEl.id = 'pkg-' + newIdx; pkgEl.dataset.idx = newIdx; pkgEl.setAttribute('onchange', 'updatePreview(' + newIdx + ')'); }
+
+            var btlEl = card.querySelector('[id^="btl-"]');
+            if (btlEl) { btlEl.id = 'btl-' + newIdx; btlEl.dataset.idx = newIdx; btlEl.setAttribute('oninput', 'calcCPB(this.dataset.idx)'); }
+
+            var cpxEl = card.querySelector('[id^="cpx-"]');
+            if (cpxEl) { cpxEl.id = 'cpx-' + newIdx; cpxEl.dataset.idx = newIdx; cpxEl.setAttribute('oninput', 'calcCPB(this.dataset.idx)'); }
+
+            var cpbEl = card.querySelector('.cpb-field');
+            if (cpbEl) cpbEl.id = 'cpb-' + newIdx;
+
+            card.querySelectorAll('[name]').forEach(function (el) {
+                el.name = el.name.replace(/sizes\[\d+\]/, 'sizes[' + newIdx + ']');
+            });
+
+            calcCPB(newIdx);
+        });
+
+        updateBadge();
+        updateEmptyState();
     }
-  });
 
-  reindex();
-})();
-/*]]>*/
+    function calcCPB(idx) {
+        var btlEl = document.getElementById('btl-' + idx);
+        var cpxEl = document.getElementById('cpx-' + idx);
+        var cpbEl = document.getElementById('cpb-' + idx);
+        if (!btlEl || !cpxEl || !cpbEl) return;
+        var b = parseFloat(btlEl.value);
+        var p = parseFloat(cpxEl.value);
+        if (b > 0 && p >= 0 && !isNaN(b) && !isNaN(p)) {
+            cpbEl.textContent = '\u20B9 ' + (p / b).toFixed(2);
+        } else {
+            cpbEl.textContent = '\u2014';
+        }
+    }
+
+    function updatePreview(idx) {
+        var lblEl  = document.getElementById('lbl-' + idx);
+        var pkgEl  = document.getElementById('pkg-' + idx);
+        var prevEl = document.getElementById('prev-' + idx);
+        if (!prevEl) return;
+        var lbl = lblEl  ? (lblEl.value  || 'New Size') : 'New Size';
+        var pkg = pkgEl  ? (pkgEl.options[pkgEl.selectedIndex] ? pkgEl.options[pkgEl.selectedIndex].text : '') : '';
+        if (pkg === '—' || pkg === '') pkg = '';
+        prevEl.innerHTML = '<strong>' + lbl + '</strong>' +
+            (pkg ? '<span class="sz-preview-sub">' + pkg + '</span>' : '');
+    }
+
+    function updateBadge() {
+        var n = document.querySelectorAll('#sizesContainer .sz-card').length;
+        document.getElementById('sizeCountBadge').textContent = n;
+    }
+
+    function updateEmptyState() {
+        var n   = document.querySelectorAll('#sizesContainer .sz-card').length;
+        var emp = document.getElementById('szEmpty');
+        if (emp) emp.style.display = n === 0 ? 'block' : 'none';
+    }
 </script>
-
 </body>
 </html>
