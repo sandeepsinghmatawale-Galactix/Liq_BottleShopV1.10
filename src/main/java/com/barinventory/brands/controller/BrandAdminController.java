@@ -1,7 +1,9 @@
 package com.barinventory.brands.controller;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -46,7 +48,7 @@ public class BrandAdminController {
     @GetMapping("/create")
     public String createForm(Model model) {
         BrandFormDTO form = new BrandFormDTO();
-        form.getSizes().add(new BrandFormDTO.SizeRow()); // one empty row by default
+        form.getSizes().add(new BrandFormDTO.SizeRow());
 
         model.addAttribute("brandFormDTO",     form);
         model.addAttribute("categories",       Brand.Category.values());
@@ -108,12 +110,8 @@ public class BrandAdminController {
                 row.setHsnCode(s.getHsnCode());
                 row.setDisplayOrder(s.getDisplayOrder());
                 row.setActive(s.isActive());
-
-                // ── CASE FIELDS (new) — must be copied or edit
-                //    form will show blank case pricing for existing sizes
                 row.setBottlesPerCase(s.getBottlesPerCase());
                 row.setCasePrice(s.getCasePrice());
-
                 form.getSizes().add(row);
             });
         }
@@ -158,5 +156,87 @@ public class BrandAdminController {
     @GetMapping("/new")
     public String legacyNew() {
         return "redirect:/admin/brands/create";
+    }
+
+    // ═════════════════════════════════════════════════════════════════
+    //  SEARCH API — consumed by setup-stockroom.html via fetch()
+    //
+    //  GET /admin/brands/search?q=kingfisher&category=BEER
+    //
+    //  Uses getAllActiveBrands() which calls findAllActiveWithSizes()
+    //  (fetch join) — no LazyInitializationException, no N+1 queries.
+    //
+    //  Returns @ResponseBody JSON — NOT a view name — because of
+    //  @ResponseBody on the method (overrides the @Controller default).
+    // ═════════════════════════════════════════════════════════════════
+    @GetMapping("/search")
+    @ResponseBody
+    public ResponseEntity<List<BrandSearchResult>> search(
+            @RequestParam(defaultValue = "") String q,
+            @RequestParam(defaultValue = "") String category) {
+
+        List<BrandSearchResult> results = brandService.getAllActiveBrands().stream()
+                .filter(b -> q.isBlank()
+                        || b.getBrandName().toLowerCase().contains(q.toLowerCase())
+                        || (b.getParentCompany() != null
+                            && b.getParentCompany().toLowerCase().contains(q.toLowerCase())))
+                .filter(b -> category.isBlank()
+                        || (b.getCategory() != null
+                            && b.getCategory().name().equalsIgnoreCase(category)))
+                .filter(b -> b.getSizes() != null && !b.getSizes().isEmpty())
+                .map(BrandSearchResult::from)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(results);
+    }
+
+    // ── Search response DTOs (static inner classes — no new files) ────
+
+    public record BrandSearchResult(
+            Long   brandId,
+            String brandName,
+            String parentCompany,
+            String category,
+            String subCategory,
+            List<SizeOption> sizes
+    ) {
+        static BrandSearchResult from(BrandDTO b) {
+            List<SizeOption> sizes = b.getSizes() == null ? List.of() :
+                    b.getSizes().stream()
+                            .filter(BrandSizeDTO::isActive)
+                            .map(SizeOption::from)
+                            .collect(Collectors.toList());
+
+            return new BrandSearchResult(
+                    b.getId(),
+                    b.getBrandName(),
+                    b.getParentCompany() != null ? b.getParentCompany() : "",
+                    b.getCategory() != null ? b.getCategory().name() : "",
+                    b.getSubCategory() != null ? b.getSubCategory().name() : "",
+                    sizes
+            );
+        }
+    }
+
+    public record SizeOption(
+            Long   brandSizeId,
+            String sizeLabel,
+            Integer volumeMl,
+            String  packaging,
+            java.math.BigDecimal mrp,
+            java.math.BigDecimal sellingPrice,
+            java.math.BigDecimal purchasePrice
+    ) {
+        static SizeOption from(BrandSizeDTO s) {
+            return new SizeOption(
+                    s.getId(),
+                    s.getSizeLabel(),
+                    s.getVolumeMl(),
+                    s.getPackaging() != null ? s.getPackaging().name() : "",
+                    s.getMrp(),
+                    s.getSellingPrice(),
+                    s.getPurchasePrice()
+            );
+        }
     }
 }

@@ -181,7 +181,6 @@
 
         .brand-name { font-weight:600;color:var(--txt); }
 
-        /* Category badge */
         .cat-badge {
             display:inline-flex;align-items:center;gap:4px;
             font-size:11px;font-weight:600;padding:3px 8px;
@@ -189,7 +188,6 @@
             color:var(--txt2);
         }
 
-        /* Status badge */
         .status {
             display:inline-flex;align-items:center;gap:5px;
             font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:20px;
@@ -200,7 +198,6 @@
         .status.inactive { background:var(--sur2);color:var(--txt3); }
         .status.inactive::before { background:var(--txt4); }
 
-        /* Sizes count pill */
         .sz-pill {
             display:inline-flex;align-items:center;gap:3px;
             font-size:11px;font-weight:600;
@@ -208,7 +205,6 @@
             border:1px solid var(--blue-mid);padding:2px 7px;border-radius:20px;
         }
 
-        /* Case config indicator */
         .case-dot {
             display:inline-flex;align-items:center;gap:3px;
             font-size:10px;font-weight:600;
@@ -217,7 +213,6 @@
             margin-left:4px;
         }
 
-        /* Action buttons */
         .actions { display:flex;align-items:center;gap:6px;flex-wrap:nowrap; }
 
         .btn {
@@ -234,7 +229,6 @@
             padding:0 10px;height:28px;
         }
         .btn-edit:hover { background:#fef3c7;border-color:#f59e0b; }
-
         .btn-del {
             background:var(--red-lt);color:var(--red);
             border:1px solid #fca5a5;font-size:12px;
@@ -242,18 +236,12 @@
         }
         .btn-del:hover { background:#fee2e2;border-color:#f87171; }
 
-        /* Empty state */
-        .empty-row td {
-            text-align:center;padding:48px 20px;color:var(--txt3);
-        }
-        .empty-ico-wrap {
-            display:flex;flex-direction:column;align-items:center;gap:8px;
-        }
+        .empty-row td { text-align:center;padding:48px 20px;color:var(--txt3); }
+        .empty-ico-wrap { display:flex;flex-direction:column;align-items:center;gap:8px; }
         .empty-ico { font-size:28px;opacity:.4; }
         .empty-t   { font-size:14px;font-weight:600;color:var(--txt2); }
         .empty-d   { font-size:13px;color:var(--txt3); }
 
-        /* Pagination area */
         .tbl-footer {
             display:flex;align-items:center;justify-content:space-between;
             padding:12px 16px;background:var(--sur2);border-top:1px solid var(--bdr);
@@ -352,14 +340,18 @@
             <div class="stat-card">
                 <div class="stat-ico green">✅</div>
                 <div>
+                    <!-- FIX: lambda → SpEL selection operator -->
+                    <!-- was: brands.stream().filter(b -> b.active).count() -->
                     <div class="stat-num"
-                         th:text="${brands.stream().filter(b -> b.active).count()}">0</div>
+                         th:text="${#lists.size(brands.?[active])}">0</div>
                     <div class="stat-lbl">Active Brands</div>
                 </div>
             </div>
             <div class="stat-card">
                 <div class="stat-ico amber">📐</div>
                 <div>
+                    <!-- FIX: lambda → SpEL projection + #aggregates.sum -->
+                    <!-- was: brands.stream().mapToLong(b -> b.sizes.size()).sum() -->
                     <div class="stat-num"
                          th:text="${#aggregates.sum(brands.![sizes.size()])}">0</div>
                     <div class="stat-lbl">Total SKUs</div>
@@ -419,13 +411,11 @@
                         th:attr="data-name=${brand.brandName},
                                  data-cat=${brand.category},
                                  data-status=${brand.active ? 'active' : 'inactive'}">
-                        <!-- FIX ↑ brand.name → brand.brandName (entity field name) -->
 
                         <td th:text="${stat.count}"
                             style="color:var(--txt4);font-size:12px;font-weight:600"></td>
 
                         <td>
-                            <!-- FIX: brand.name → brand.brandName -->
                             <div class="brand-name" th:text="${brand.brandName}"></div>
                             <div style="font-size:11px;color:var(--txt3);margin-top:2px"
                                  th:text="${brand.parentCompany != null && !brand.parentCompany.isEmpty()
@@ -434,10 +424,6 @@
                         </td>
 
                         <td>
-                            <!--
-                                Guard against null category — brand can be saved without one
-                                (category is optional in the entity)
-                            -->
                             <span class="cat-badge" th:if="${brand.category != null}">
                                 <span th:text="${brand.category.name()=='WHISKY' ?'🥃':
                                                 brand.category.name()=='BEER'   ?'🍺':
@@ -458,10 +444,8 @@
                             <span class="sz-pill"
                                   th:text="${brand.sizes.size() + ' size' + (brand.sizes.size() != 1 ? 's' : '')}">
                             </span>
-                            <!--
-                                Show a small case indicator if any size has case pricing configured.
-                                Uses bottlesPerCase field added to BrandSize in our last update.
-                            -->
+                            <!-- FIX: lambda → SpEL selection operator -->
+                            <!-- was: brand.sizes.stream().anyMatch(s -> s.bottlesPerCase != null) -->
                             <span class="case-dot"
                                   th:if="${not #lists.isEmpty(brand.sizes.?[bottlesPerCase != null])}">
                                 📦 case
