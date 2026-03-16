@@ -97,7 +97,7 @@ public class BillingServiceImpl implements BillingService {
     @Override
     @Transactional(readOnly = true)
     public List<BrandBillingDTO> getAllActiveBrands2() {
-        List<Brand> brands = brandRepository.findAllActiveWithSizes();
+        List<Brand> brands = brandRepository.findAllActiveWithActiveSizes();
 
         return brands.stream()
                 .map(brand -> new BrandBillingDTO(

@@ -159,15 +159,13 @@ public class BrandAdminController {
     }
 
     // ═════════════════════════════════════════════════════════════════
-    //  SEARCH API — consumed by setup-stockroom.html via fetch()
+    //  SEARCH API — consumed by setup-stockroom.html and setup-wells.html
     //
     //  GET /admin/brands/search?q=kingfisher&category=BEER
     //
-    //  Uses getAllActiveBrands() which calls findAllActiveWithSizes()
-    //  (fetch join) — no LazyInitializationException, no N+1 queries.
-    //
-    //  Returns @ResponseBody JSON — NOT a view name — because of
-    //  @ResponseBody on the method (overrides the @Controller default).
+    //  Returns JSON including productId in each SizeOption so the
+    //  setup forms can build field names keyed by productId, which
+    //  is what saveSetupStockroom() and saveSetupWells() read.
     // ═════════════════════════════════════════════════════════════════
     @GetMapping("/search")
     @ResponseBody
@@ -190,7 +188,7 @@ public class BrandAdminController {
         return ResponseEntity.ok(results);
     }
 
-    // ── Search response DTOs (static inner classes — no new files) ────
+    // ── Search response DTOs ──────────────────────────────────────────
 
     public record BrandSearchResult(
             Long   brandId,
@@ -219,10 +217,13 @@ public class BrandAdminController {
     }
 
     public record SizeOption(
-            Long   brandSizeId,
-            String sizeLabel,
-            Integer volumeMl,
-            String  packaging,
+            Long     brandSizeId,
+            Long     productId,      // ← ADDED: admin module productId linked to this size
+                                     //   used by setup forms to build field names that
+                                     //   saveSetupStockroom() and saveSetupWells() can read
+            String   sizeLabel,
+            Integer  volumeMl,
+            String   packaging,
             java.math.BigDecimal mrp,
             java.math.BigDecimal sellingPrice,
             java.math.BigDecimal purchasePrice
@@ -230,6 +231,7 @@ public class BrandAdminController {
         static SizeOption from(BrandSizeDTO s) {
             return new SizeOption(
                     s.getId(),
+                    s.getId(),   // ← ADDED: must be populated in BrandSizeDTO
                     s.getSizeLabel(),
                     s.getVolumeMl(),
                     s.getPackaging() != null ? s.getPackaging().name() : "",

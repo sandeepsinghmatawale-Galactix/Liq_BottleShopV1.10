@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Review Invoice</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f4f6fb; }
+        .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .review-header { background: linear-gradient(135deg,#a18cd1 0%,#fbc2eb 100%);
+                         border-radius:15px; color:#2d1a4b; }
+        .table th { background:#f8f9fa; font-size:0.8rem;
+                    text-transform:uppercase; letter-spacing:0.05em; }
+        .match-warning { background:#fff8e1; }
+        .editable-input { width:80px; text-align:center; }
+        #loadingOverlay {
+            position:fixed; top:0; left:0; width:100%; height:100%;
+            background:rgba(255,255,255,0.85);
+            display:flex; align-items:center; justify-content:center;
+            z-index:9999; display:none;
+        }
+        .mismatch-alert { border-left: 4px solid #ffc107; }
+    </style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loadingOverlay">
+    <div class="text-center">
+        <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem;"></div>
+        <p class="fw-semibold text-primary">Posting stock to stockroom...</p>
+    </div>
+</div>
+
+<!-- Navbar -->
+<nav class="navbar navbar-dark navbar-expand-lg shadow-sm">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" th:href="@{/dashboard}">
+            <i class="bi bi-shop-window"></i> Liquor Inventory
+        </a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav me-auto ms-4">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/invoices}">
+                        <i class="bi bi-file-earmark-text"></i> Invoices
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item">
+                <a th:href="@{/dashboard}" class="text-decoration-none">Dashboard</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a th:href="@{/invoices}" class="text-decoration-none">Invoices</a>
+            </li>
+            <li class="breadcrumb-item active">Review</li>
+        </ol>
+    </nav>
+
+    <!-- Loading state while JS fetches data -->
+    <div id="loadingCard" class="card shadow-sm mb-4 text-center py-5"
+         style="border-radius:12px; border:none;">
+        <div class="spinner-border text-primary mx-auto mb-3"></div>
+        <p class="text-muted">Loading extracted invoice data...</p>
+    </div>
+
+    <!-- Review content — hidden until data loads -->
+    <div id="reviewContent" style="display:none;">
+
+        <!-- Invoice header card -->
+        <div class="card review-header mb-4 shadow-sm">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <h5 class="fw-bold mb-3">
+                            <i class="bi bi-file-earmark-check"></i>
+                            Review Extracted Invoice
+                        </h5>
+                        <table class="table table-sm table-borderless mb-0 small">
+                            <tr>
+                                <td class="fw-semibold pe-3">ICDC Number</td>
+                                <td id="hdrInvoiceNo" class="fw-bold">—</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold pe-3">Depot</td>
+                                <td id="hdrDepot">—</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold pe-3">Retailer</td>
+                                <td id="hdrRetailer">—</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold pe-3">License No</td>
+                                <td id="hdrLicense">—</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold pe-3">Invoice Date</td>
+                                <td id="hdrInvoiceDate" class="text-danger fw-semibold">—</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold pe-3">Total Amount</td>
+                                <td id="hdrTotalAmount">—</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <!-- Stock Received Date input — critical -->
+                        <div class="card bg-white shadow-sm h-100"
+                             style="border-radius:12px; border:2px solid #764ba2;">
+                            <div class="card-body">
+                                <h6 class="fw-bold mb-1" style="color:#764ba2;">
+                                    <i class="bi bi-calendar-check"></i>
+                                    Stock Received Date
+                                </h6>
+                                <p class="text-muted small mb-3">
+                                    Enter the actual date the vehicle arrived and stock was unloaded.
+                                    This date is used to add stock to stockroom — not the invoice date.
+                                </p>
+                                <input type="date" class="form-control fw-semibold"
+                                       id="stockReceivedDate"
+                                       style="border-color:#764ba2; font-size:1.1rem;">
+                                <div class="form-text text-muted mt-1">
+                                    <i class="bi bi-info-circle"></i>
+                                    Cannot be before invoice date or in the future.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Totals mismatch warning -->
+        <div id="mismatchWarning"
+             class="alert alert-warning mismatch-alert mb-3"
+             style="display:none;">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <strong>Case totals mismatch detected.</strong>
+            Extracted item totals don't match the ICDC footer summary.
+            Please review each line carefully.
+        </div>
+
+        <!-- Vehicle charges -->
+        <div class="card shadow-sm mb-3" style="border-radius:12px; border:none;">
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Vehicle Number</label>
+                        <input type="text" class="form-control form-control-sm"
+                               id="vehicleNumber" placeholder="e.g. TS09AB1234">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Vehicle Charges (₹)</label>
+                        <input type="number" class="form-control form-control-sm"
+                               id="vehicleCharges" placeholder="0.00" min="0">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Remarks</label>
+                        <input type="text" class="form-control form-control-sm"
+                               id="remarks" placeholder="Optional notes">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Line items table -->
+        <div class="card shadow-sm mb-4" style="border-radius:12px; border:none;">
+            <div class="card-header bg-white border-bottom py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0">
+                        <i class="bi bi-table"></i> Invoice Line Items
+                    </h6>
+                    <span class="badge bg-secondary" id="itemCount"></span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">#</th>
+                                <th>Brand (from PDF)</th>
+                                <th>Matched Brand</th>
+                                <th>Type</th>
+                                <th>Size</th>
+                                <th>Btl/Case</th>
+                                <th>Invoiced Cases</th>
+                                <th class="text-danger">Received Cases *</th>
+                                <th class="text-warning">Breakage *</th>
+                                <th>MRP/Btl</th>
+                                <th>Line Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsTableBody">
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light fw-semibold">
+                                <td colspan="6" class="ps-3 text-end">Totals:</td>
+                                <td id="totalInvoicedCases" class="text-center fw-bold"></td>
+                                <td id="totalReceivedCases" class="text-center fw-bold text-danger"></td>
+                                <td id="totalBreakage" class="text-center fw-bold text-warning"></td>
+                                <td></td>
+                                <td id="grandTotal" class="fw-bold"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="d-flex gap-3 justify-content-end mb-5">
+            <a th:href="@{/invoices}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+            <button class="btn btn-success btn-lg px-4 fw-semibold"
+                    onclick="confirmInvoice()">
+                <i class="bi bi-check-circle-fill"></i>
+                Confirm &amp; Add to Stockroom
+            </button>
+        </div>
+
+        <!-- Success message -->
+        <div id="successMsg" class="alert alert-success d-none mb-4" role="alert">
+            <i class="bi bi-check-circle-fill"></i>
+            <strong>Invoice confirmed!</strong>
+            Stock has been added to stockroom.
+            <a th:href="@{/invoices}" class="alert-link ms-2">View all invoices →</a>
+        </div>
+
+        <!-- Error message -->
+        <div id="confirmError" class="alert alert-danger d-none mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span id="confirmErrorText"></span>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    const invoiceId  = /*[[${invoiceId}]]*/ null;
+    const csrfToken  = /*[[${_csrf.token}]]*/ '';
+    const csrfHeader = /*[[${_csrf.headerName}]]*/ 'X-CSRF-TOKEN';
+
+    let extractedData = null;
+
+    // ── Load extracted data on page load ─────────────────────────────────────
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const res  = await fetch('/api/invoices/' + invoiceId);
+            const json = await res.json();
+            if (json.success) {
+                extractedData = json.data;
+                renderReviewScreen(json.data);
+            } else {
+                showConfirmError('Failed to load invoice: ' + json.message);
+            }
+        } catch (e) {
+            showConfirmError('Network error loading invoice: ' + e.message);
+        }
+    });
+
+    // ── Render review screen from API data ────────────────────────────────────
+
+    function renderReviewScreen(data) {
+        // Header fields
+        document.getElementById('hdrInvoiceNo').textContent    = data.invoiceNumber || '—';
+        document.getElementById('hdrDepot').textContent        = data.depotName     || '—';
+        document.getElementById('hdrRetailer').textContent     = data.retailerName  || '—';
+        document.getElementById('hdrLicense').textContent      = data.licenseNumber || '—';
+        document.getElementById('hdrInvoiceDate').textContent  = formatDate(data.invoiceDate);
+        document.getElementById('hdrTotalAmount').textContent  =
+                data.totalAmount ? '₹' + data.totalAmount.toLocaleString('en-IN') : '—';
+
+        // Default stockReceivedDate to today
+        const today = new Date().toISOString().split('T')[0];
+        const receivedDateInput = document.getElementById('stockReceivedDate');
+        receivedDateInput.value = data.stockReceivedDate || today;
+        receivedDateInput.max   = today;
+        if (data.invoiceDate) receivedDateInput.min = data.invoiceDate;
+
+        // Mismatch warning
+        if (data.totalsMismatch) {
+            document.getElementById('mismatchWarning').style.display = 'block';
+        }
+
+        // Render line items
+        const tbody = document.getElementById('itemsTableBody');
+        tbody.innerHTML = '';
+        let totalInvoiced = 0, totalReceived = 0,
+            totalBreakage = 0, grandTotal   = 0;
+
+        (data.items || []).forEach((item, idx) => {
+            totalInvoiced += item.invoicedCases || 0;
+            totalReceived += item.receivedCases || 0;
+            totalBreakage += item.breakageQty   || 0;
+            grandTotal    += item.lineTotal     || 0;
+
+            const rowClass = !item.matchConfident ? 'match-warning' : '';
+            tbody.innerHTML += `
+                <tr class="${rowClass}" data-item-id="${item.itemId}">
+                    <td class="ps-3 small text-muted">${idx + 1}</td>
+                    <td class="small fw-semibold">${item.brandNameRaw || '—'}</td>
+                    <td class="small">
+                        ${item.matchConfident
+                            ? `<span class="text-success">
+                                <i class="bi bi-check-circle"></i>
+                                ${item.brandNameMatched || '—'}
+                               </span>`
+                            : `<span class="text-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                ${item.brandNameMatched || 'Not matched'}
+                               </span>`
+                        }
+                    </td>
+                    <td class="small">
+                        <span class="badge ${item.productType === 'Beer'
+                            ? 'bg-info text-dark' : 'bg-secondary'}">
+                            ${item.productType || '—'}
+                        </span>
+                    </td>
+                    <td class="small">${item.sizeMl ? item.sizeMl + 'ml' : '—'}</td>
+                    <td class="small text-center">${item.bottlesPerCase || '—'}</td>
+                    <td class="small text-center fw-semibold">${item.invoicedCases || 0}</td>
+                    <td>
+                        <input type="number"
+                               class="form-control form-control-sm editable-input received-input"
+                               data-item-id="${item.itemId}"
+                               value="${item.invoicedCases || 0}"
+                               min="0" max="${item.invoicedCases || 999}"
+                               onchange="updateTotals()">
+                    </td>
+                    <td>
+                        <input type="number"
+                               class="form-control form-control-sm editable-input breakage-input"
+                               data-item-id="${item.itemId}"
+                               value="0" min="0"
+                               onchange="updateTotals()">
+                    </td>
+                    <td class="small">
+                        ${item.mrpPerBottle
+                            ? '₹' + item.mrpPerBottle.toFixed(2) : '—'}
+                    </td>
+                    <td class="small fw-semibold">
+                        ${item.lineTotal
+                            ? '₹' + item.lineTotal.toLocaleString('en-IN') : '—'}
+                    </td>
+                </tr>`;
+        });
+
+        // Footer totals
+        document.getElementById('totalInvoicedCases').textContent = totalInvoiced;
+        document.getElementById('totalReceivedCases').textContent = totalReceived;
+        document.getElementById('totalBreakage').textContent      = totalBreakage;
+        document.getElementById('grandTotal').textContent =
+                '₹' + grandTotal.toLocaleString('en-IN');
+        document.getElementById('itemCount').textContent =
+                (data.items || []).length + ' items';
+
+        // Show content
+        document.getElementById('loadingCard').style.display  = 'none';
+        document.getElementById('reviewContent').style.display = 'block';
+    }
+
+    // ── Live total update ─────────────────────────────────────────────────────
+
+    function updateTotals() {
+        let totalReceived = 0, totalBreakage = 0;
+        document.querySelectorAll('.received-input')
+                .forEach(i => totalReceived += parseInt(i.value) || 0);
+        document.querySelectorAll('.breakage-input')
+                .forEach(i => totalBreakage += parseInt(i.value) || 0);
+        document.getElementById('totalReceivedCases').textContent = totalReceived;
+        document.getElementById('totalBreakage').textContent      = totalBreakage;
+    }
+
+    // ── Confirm & Post to Stockroom ───────────────────────────────────────────
+
+    async function confirmInvoice() {
+        const stockReceivedDate =
+                document.getElementById('stockReceivedDate').value;
+
+        if (!stockReceivedDate) {
+            showConfirmError('Please enter the Stock Received Date.');
+            return;
+        }
+
+        // Build items array from table inputs
+        const items = [];
+        document.querySelectorAll('#itemsTableBody tr').forEach(row => {
+            const itemId   = row.dataset.itemId;
+            const received = row.querySelector('.received-input');
+            const breakage = row.querySelector('.breakage-input');
+            if (itemId && received) {
+                items.push({
+                    itemId       : parseInt(itemId),
+                    receivedCases: parseInt(received.value) || 0,
+                    breakageQty  : parseInt(breakage.value) || 0
+                });
+            }
+        });
+
+        const payload = {
+            invoiceId       : invoiceId,
+            stockReceivedDate: stockReceivedDate,
+            vehicleNumber   : document.getElementById('vehicleNumber').value,
+            vehicleCharges  : parseFloat(document.getElementById('vehicleCharges').value) || 0,
+            remarks         : document.getElementById('remarks').value,
+            items           : items
+        };
+
+        document.getElementById('loadingOverlay').style.display = 'flex';
+
+        try {
+            const res = await fetch(
+                '/api/invoices/confirm?confirmedBy=bar_owner', {
+                    method : 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        [csrfHeader]  : csrfToken
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+            const json = await res.json();
+
+            if (json.success) {
+                document.getElementById('successMsg').classList.remove('d-none');
+                document.getElementById('confirmError').classList.add('d-none');
+                // Redirect to invoice list after 2 seconds
+                setTimeout(() => window.location.href = '/invoices', 2000);
+            } else {
+                showConfirmError(json.message || 'Confirmation failed.');
+            }
+        } catch (e) {
+            showConfirmError('Network error: ' + e.message);
+        } finally {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    }
+
+    // ── Utils ─────────────────────────────────────────────────────────────────
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '—';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('en-IN',
+            { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function showConfirmError(msg) {
+        const el = document.getElementById('confirmError');
+        document.getElementById('confirmErrorText').textContent = msg;
+        el.classList.remove('d-none');
+        el.scrollIntoView({ behavior: 'smooth' });
+    }
+</script>
+</body>
+</html>

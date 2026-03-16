@@ -1,10 +1,12 @@
 package com.barinventory.brands.service;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.barinventory.admin.dto.BrandSizeProductDTO;
 import com.barinventory.brands.dtos.BrandDTO;
 import com.barinventory.brands.dtos.BrandFormDTO;
 import com.barinventory.brands.dtos.BrandSizeDTO;
@@ -33,7 +35,7 @@ public class BrandServiceImpl implements BrandService {
     @Override
     @Transactional(readOnly = true)
     public List<BrandDTO> getAllActiveBrands() {
-        return brandRepository.findAllActiveWithSizes()
+        return brandRepository.findAllActiveWithActiveSizes()
                 .stream().map(this::mapToDTO).toList();
     }
 
@@ -96,6 +98,45 @@ public class BrandServiceImpl implements BrandService {
         return mapToDTO(brandRepository.save(brand));
     }
 
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<BrandSizeProductDTO> getAllActiveProducts() {
+
+        return brandRepository.findAllActiveWithActiveSizes()
+                .stream()
+
+                .flatMap(brand -> brand.getSizes().stream()
+                        .filter(BrandSize::isActive)
+                        .map(size -> new BrandSizeProductDTO(
+
+                                size.getId(),
+
+                                brand.getBrandName() + " " + size.getSizeLabel(),
+
+                                brand.getCategory() != null
+                                        ? brand.getCategory().name()
+                                        : "",
+
+                                brand.getBrandName(),
+
+                                BigDecimal.valueOf(size.getVolumeMl())   // FIX HERE
+                        ))
+                )
+                .sorted((a, b) -> {
+
+                    int c = a.getCategory().compareToIgnoreCase(b.getCategory());
+                    if (c != 0) return c;
+
+                    int b1 = a.getBrand().compareToIgnoreCase(b.getBrand());
+                    if (b1 != 0) return b1;
+
+                    return a.getVolumeML().compareTo(b.getVolumeML());
+
+                })
+
+                .toList();
+    }
     // ── UPDATE WITH SIZES (form) ──────────────────────────────────────
     @Override
     @Transactional

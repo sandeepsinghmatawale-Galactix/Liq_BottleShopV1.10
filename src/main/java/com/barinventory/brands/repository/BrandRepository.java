@@ -30,12 +30,12 @@ public interface BrandRepository extends JpaRepository<Brand, Long> {
            """)
     Optional<Brand> findByIdWithSizes(@Param("id") Long id);
 
-    // ── All active brands with active sizes ───────────────────────────
     @Query("""
-           SELECT DISTINCT b FROM Brand b
-           LEFT JOIN FETCH b.sizes s
-           WHERE b.active = true AND (s IS NULL OR s.active = true)
-           ORDER BY b.brandName
-           """)
-    List<Brand> findAllActiveWithSizes();
+    		SELECT DISTINCT b FROM Brand b
+    		LEFT JOIN FETCH b.sizes s
+    		WHERE b.active = true AND (s IS NULL OR s.active = true)
+    		ORDER BY b.brandName
+    		""")
+    		List<Brand> findAllActiveWithActiveSizes();
+    
 }

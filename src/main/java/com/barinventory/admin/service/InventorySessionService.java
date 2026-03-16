@@ -747,34 +747,34 @@ public class InventorySessionService {
     /**
      * ADMIN: Save initial wells opening stock
      */
+    
     @Transactional
     public void saveSetupWells(Long sessionId, Map<String, String> formData) {
         InventorySession session = sessionRepository.findByIdWithBar(sessionId)
             .orElseThrow(() -> new RuntimeException("Session not found"));
 
-        if (session.getStatus() != SessionStatus.SETUP) {
+        if (session.getStatus() != SessionStatus.SETUP)
             throw new RuntimeException("Not a setup session");
-        }
 
         wellRepository.deleteBySessionSessionId(sessionId);
         List<Product> products = productService.getAllActiveProducts();
-
-        // ✅ Use bar's configured wells
         List<String> wellNames = getWellNamesForBar(session.getBar().getBarId());
 
         for (String wellName : wellNames) {
             for (Product product : products) {
-                String key = "opening_" + product.getProductId() + "_" + wellName;
-                BigDecimal openingQty = parseDecimal(formData.get(key));
+                // FIX: matches form field name = opening_{productId}_{Well-Name-hyphenated}
+                String key = "opening_" + product.getProductId()
+                           + "_" + wellName.replace(" ", "-");
+                BigDecimal qty = parseDecimal(formData.get(key));
 
-                if (openingQty.compareTo(BigDecimal.ZERO) > 0) {
+                if (qty.compareTo(BigDecimal.ZERO) > 0) {
                     WellInventory wi = WellInventory.builder()
                         .session(session)
                         .product(product)
-                        .wellName(wellName)
-                        .openingStock(openingQty)
+                        .wellName(wellName)          // store with spaces — DB consistent
+                        .openingStock(qty)
                         .receivedFromDistribution(BigDecimal.ZERO)
-                        .closingStock(openingQty)
+                        .closingStock(qty)
                         .consumed(BigDecimal.ZERO)
                         .remarks("Admin initial setup")
                         .build();
@@ -782,6 +782,7 @@ public class InventorySessionService {
                 }
             }
         }
+        log.info("Saved setup wells for session {}", sessionId);
     }
 
     /**
@@ -820,10 +821,26 @@ public class InventorySessionService {
             ));
     }
 
+    
+  
+    
+    public List<StockroomInventory> getSetupStockroomRows(Long sessionId) {
+        return stockroomRepository.findBySessionSessionId(sessionId).stream()
+            .filter(r -> r.getOpeningStock().compareTo(BigDecimal.ZERO) > 0)
+            .collect(Collectors.toList());
+    }
+
+    public List<WellInventory> getSetupWellsRows(Long sessionId) {
+        return wellRepository.findBySessionSessionId(sessionId).stream()
+            .filter(r -> r.getOpeningStock().compareTo(BigDecimal.ZERO) > 0)
+            .collect(Collectors.toList());
+    }
+
+    // Fix key format — spaces → hyphens
     public Map<String, BigDecimal> getSetupWellsData(Long sessionId) {
         return wellRepository.findBySessionSessionId(sessionId).stream()
             .collect(Collectors.toMap(
-                w -> w.getProduct().getProductId() + "_" + w.getWellName(),
+                w -> w.getProduct().getProductId() + "_" + w.getWellName().replace(" ", "-"),
                 WellInventory::getClosingStock
             ));
     }

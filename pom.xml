@@ -114,6 +114,32 @@
 			<artifactId>flying-saucer-pdf</artifactId>
 			<version>9.1.22</version>
 		</dependency>
+		<!-- Apache PDFBox — PDF text extraction (core library) -->
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>3.0.1</version>
+		</dependency>
+
+		<!-- PDFBox tools (includes PDFTextStripper utilities) -->
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox-tools</artifactId>
+			<version>3.0.1</version>
+		</dependency>
+
+		<!-- Apache Commons Logging (PDFBox dependency) -->
+		<dependency>
+			<groupId>commons-logging</groupId>
+			<artifactId>commons-logging</artifactId>
+			<version>1.3.0</version>
+		</dependency>
+		<!-- Apache PDFBox — PDF text extraction -->
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>2.0.31</version>
+		</dependency>
 	</dependencies>
 
 	<build>
