@@ -53,6 +53,7 @@ public class SecurityConfig {
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
                 // ✅ Public pages
                 .requestMatchers("/login", "/error", "/").permitAll()
+                .requestMatchers("/invoices/**").permitAll()
                 // ✅ Dashboard - all authenticated roles
                 .requestMatchers("/dashboard").hasAnyRole("ADMIN", "BAR_OWNER", "BAR_STAFF")
                 // ✅ Admin only

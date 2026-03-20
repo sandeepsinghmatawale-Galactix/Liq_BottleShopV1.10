@@ -9,18 +9,29 @@
     <style>
         body { background-color: #f4f6fb; }
         .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .detail-header { background: linear-gradient(135deg,#d1e7dd 0%,#a8d5ba 100%);
-                         border-radius:15px; }
+        .detail-header {
+            background: linear-gradient(135deg, #d1e7dd 0%, #a8d5ba 100%);
+            border-radius: 15px;
+        }
         .detail-header.discrepancy {
-            background: linear-gradient(135deg,#f8d7da 0%,#f1aeb5 100%); }
-        .table th { background:#f8f9fa; font-size:0.8rem;
-                    text-transform:uppercase; letter-spacing:0.05em; }
-        .shortage-row td { background:#fff3cd !important; }
-        .breakage-row td { background:#f8d7da !important; }
+            background: linear-gradient(135deg, #f8d7da 0%, #f1aeb5 100%);
+        }
+        .table th {
+            background: #f8f9fa;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .shortage-row td { background: #fff3cd !important; }
+        .breakage-row  td { background: #f8d7da !important; }
+        .brand-raw   { font-size: 0.85rem; font-weight: 600; }
+        .brand-matched { font-size: 0.72rem; color: #198754; }
+        .brand-unmatched { font-size: 0.72rem; color: #6c757d; font-style: italic; }
     </style>
 </head>
 <body>
 
+<!-- Navbar -->
 <nav class="navbar navbar-dark navbar-expand-lg shadow-sm">
     <div class="container-fluid">
         <a class="navbar-brand fw-bold" th:href="@{/dashboard}">
@@ -40,6 +51,7 @@
 
 <div class="container mt-4">
 
+    <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb small">
             <li class="breadcrumb-item">
@@ -48,20 +60,21 @@
             <li class="breadcrumb-item">
                 <a th:href="@{/invoices}" class="text-decoration-none">Invoices</a>
             </li>
-            <li class="breadcrumb-item active"
-                th:text="${invoice.invoiceNumber}"></li>
+            <li class="breadcrumb-item active" th:text="${invoice.invoiceNumber}"></li>
         </ol>
     </nav>
 
-    <!-- Header card -->
+    <!-- ── Header card ──────────────────────────────────────────────────── -->
     <div class="card mb-4 shadow-sm"
          th:classappend="${invoice.hasDiscrepancy} ? 'detail-header discrepancy' : 'detail-header'">
         <div class="card-body">
             <div class="row g-3">
+
+                <!-- Left: invoice meta -->
                 <div class="col-md-8">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <h5 class="fw-bold mb-0"
-                            th:text="${invoice.invoiceNumber}"></h5>
+                    <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+                        <h5 class="fw-bold mb-0" th:text="${invoice.invoiceNumber}"></h5>
+
                         <span class="badge fs-6"
                               th:classappend="${invoice.status.name() == 'CONFIRMED'}
                                   ? 'bg-success'
@@ -69,33 +82,38 @@
                                       ? 'bg-danger' : 'bg-warning text-dark')"
                               th:text="${invoice.status}">
                         </span>
-                        <span th:if="${invoice.hasDiscrepancy}"
-                              class="badge bg-warning text-dark">
+
+                        <span th:if="${invoice.hasDiscrepancy}" class="badge bg-warning text-dark">
                             <i class="bi bi-exclamation-triangle"></i> Discrepancy
                         </span>
                     </div>
+
                     <table class="table table-sm table-borderless mb-0 small">
-                        <tr>
+                        <tr th:if="${invoice.depotName != null}">
                             <td class="fw-semibold pe-3" style="width:160px">Depot</td>
                             <td th:text="${invoice.depotName}"></td>
+                        </tr>
+                        <tr th:if="${invoice.retailerName != null}">
+                            <td class="fw-semibold pe-3">Retailer</td>
+                            <td th:text="${invoice.retailerName}"></td>
                         </tr>
                         <tr>
                             <td class="fw-semibold pe-3">Invoice Date</td>
                             <td th:text="${invoice.invoiceDate != null ?
-                                #temporals.format(invoice.invoiceDate,'dd MMM yyyy') : '—'}">
+                                #temporals.format(invoice.invoiceDate, 'dd MMM yyyy') : '—'}">
                             </td>
                         </tr>
                         <tr>
-                            <td class="fw-semibold pe-3">Stock Received Date</td>
+                            <td class="fw-semibold pe-3">Stock Received</td>
                             <td class="fw-bold text-success"
                                 th:text="${invoice.stockReceivedDate != null ?
-                                #temporals.format(invoice.stockReceivedDate,'dd MMM yyyy') : '—'}">
+                                #temporals.format(invoice.stockReceivedDate, 'dd MMM yyyy') : '—'}">
                             </td>
                         </tr>
                         <tr>
                             <td class="fw-semibold pe-3">Uploaded</td>
                             <td th:text="${invoice.uploadedAt != null ?
-                                #temporals.format(invoice.uploadedAt,'dd MMM yyyy HH:mm') : '—'}">
+                                #temporals.format(invoice.uploadedAt, 'dd MMM yyyy HH:mm') : '—'}">
                             </td>
                         </tr>
                         <tr th:if="${invoice.vehicleNumber != null}">
@@ -104,8 +122,9 @@
                         </tr>
                     </table>
                 </div>
+
+                <!-- Right: summary stats -->
                 <div class="col-md-4">
-                    <!-- Summary stats -->
                     <div class="row g-2">
                         <div class="col-6">
                             <div class="card text-center py-2 border-0 bg-white bg-opacity-75">
@@ -132,92 +151,174 @@
                             <div class="card text-center py-2 border-0 bg-white bg-opacity-75">
                                 <div class="fs-4 fw-bold"
                                      th:text="${invoice.totalAmount != null ?
-                                         '₹' + #numbers.formatInteger(invoice.totalAmount,1,'COMMA') : '—'}">
+                                         '₹' + #numbers.formatInteger(invoice.totalAmount, 1, 'COMMA') : '—'}">
                                 </div>
                                 <div class="small text-muted">Total Value</div>
                             </div>
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>
 
-    <!-- Line items table -->
-    <div class="card shadow-sm mb-5" style="border-radius:12px; border:none;">
-        <div class="card-header bg-white py-3">
+    <!-- ── Line items table ─────────────────────────────────────────────── -->
+    <div class="card shadow-sm mb-4" style="border-radius:12px; border:none;">
+        <div class="card-header bg-white py-3 d-flex align-items-center gap-2">
             <h6 class="fw-bold mb-0">
                 <i class="bi bi-table"></i> Invoice Line Items
-                <span class="badge bg-secondary ms-2"
-                      th:text="${#lists.size(invoice.items)} + ' items'"></span>
             </h6>
+            <span class="badge bg-secondary"
+                  th:text="${invoice.items != null ? #lists.size(invoice.items) + ' items' : '0 items'}">
+            </span>
+            <!--
+                Brand matching note — shown when some items have unmatched brands.
+                Owner can link brands manually after reviewing.
+            -->
+            <span class="ms-auto small text-muted fst-italic"
+                  th:if="${invoice.items != null and #lists.size(invoice.items) > 0}">
+                Brand shown as-is from PDF. Link to master brand on confirm screen.
+            </span>
         </div>
+
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
+
+            <!-- Empty state -->
+            <div th:if="${invoice.items == null or #lists.isEmpty(invoice.items)}"
+                 class="text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                No items found for this invoice.
+            </div>
+
+            <!-- Items table -->
+            <div class="table-responsive" th:if="${invoice.items != null and not #lists.isEmpty(invoice.items)}">
+                <table class="table table-hover mb-0 align-middle">
                     <thead>
                         <tr>
-                            <th class="ps-3">#</th>
-                            <th>Brand</th>
+                            <th class="ps-3" style="width:40px">#</th>
+                            <th>Brand (from PDF)</th>
                             <th>Type</th>
+                            <th>Pack</th>
                             <th>Size</th>
-                            <th>Btl/Case</th>
-                            <th>Invoiced</th>
-                            <th>Received</th>
-                            <th>Shortage</th>
-                            <th>Breakage</th>
-                            <th>Net Bottles</th>
-                            <th>MRP/Btl</th>
-                            <th class="pe-3">Stockroom</th>
+                            <th class="text-center">Btl/Case</th>
+                            <th class="text-center">Invoiced<br>Cases</th>
+                            <th class="text-center">Received<br>Cases</th>
+                            <th class="text-center">Shortage</th>
+                            <th class="text-center">Breakage<br>Btls</th>
+                            <th class="text-center">Net<br>Bottles</th>
+                            <th class="text-end">MRP/Btl</th>
+                            <th class="text-end">Rate/Case</th>
+                            <th class="text-end pe-3">Line Total</th>
+                            <th class="text-center">Stockroom</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr th:each="item, stat : ${invoice.items}"
                             th:classappend="${item.hasShortage and item.hasBreakage} ? 'shortage-row' :
-                                            (${item.hasShortage} ? 'shortage-row' :
-                                            (${item.hasBreakage} ? 'breakage-row' : ''))">
-                            <td class="ps-3 small text-muted"
-                                th:text="${stat.index + 1}"></td>
+                                           (${item.hasShortage} ? 'shortage-row' :
+                                           (${item.hasBreakage} ? 'breakage-row' : ''))">
+
+                            <!-- # -->
+                            <td class="ps-3 small text-muted" th:text="${stat.index + 1}"></td>
+
+                            <!-- Brand -->
                             <td>
-                                <div class="fw-semibold small"
-                                     th:text="${item.brandNameMatched ?: item.brandNameRaw}">
+                                <!--
+                                    PRIMARY: always show brandNameRaw (from PDF) — source of truth.
+                                    A new brand on the market won't be in master list yet,
+                                    so we never hide or replace the PDF name.
+                                -->
+                                <div class="brand-raw" th:text="${item.brandNameRaw}"></div>
+
+                                <!-- If owner has already linked this to master, show it as secondary -->
+                                <div th:if="${item.brandNameMatched != null}"
+                                     class="brand-matched">
+                                    <i class="bi bi-link-45deg"></i>
+                                    <span th:text="${item.brandNameMatched}"></span>
                                 </div>
-                                <div class="text-muted" style="font-size:0.75rem;"
-                                     th:if="${item.brandNameMatched != null}"
-                                     th:text="'PDF: ' + ${item.brandNameRaw}">
+
+                                <!-- If not linked yet, show a subtle "not linked" hint -->
+                                <div th:if="${item.brandNameMatched == null}"
+                                     class="brand-unmatched">
+                                    not linked to master
                                 </div>
                             </td>
+
+                            <!-- Product type badge -->
                             <td>
-                                <span class="badge"
+                                <span th:if="${item.productType != null}"
+                                      class="badge"
                                       th:classappend="${item.productType == 'Beer'}
                                           ? 'bg-info text-dark' : 'bg-secondary'"
-                                      th:text="${item.productType ?: '—'}">
+                                      th:text="${item.productType}">
                                 </span>
+                                <span th:if="${item.productType == null}" class="text-muted">—</span>
                             </td>
+
+                            <!-- Pack type (G/P) -->
+                            <td>
+                                <span th:if="${item.packType != null}"
+                                      class="badge bg-light text-dark border"
+                                      th:text="${item.packType == 'G'} ? 'Glass' : (${item.packType == 'P'} ? 'PET' : ${item.packType})">
+                                </span>
+                                <span th:if="${item.packType == null}" class="text-muted">—</span>
+                            </td>
+
+                            <!-- Size -->
                             <td class="small"
-                                th:text="${item.sizeMl != null ? item.sizeMl + 'ml' : '—'}">
+                                th:text="${item.sizeMl != null and item.sizeMl > 0 ? item.sizeMl + ' ml' : '—'}">
                             </td>
+
+                            <!-- Btl/Case -->
                             <td class="small text-center"
-                                th:text="${item.bottlesPerCase ?: '—'}"></td>
-                            <td class="small text-center fw-semibold"
+                                th:text="${item.bottlesPerCase != null and item.bottlesPerCase > 0 ? item.bottlesPerCase : '—'}">
+                            </td>
+
+                            <!-- Invoiced cases -->
+                            <td class="text-center fw-semibold"
                                 th:text="${item.invoicedCases ?: 0}"></td>
-                            <td class="small text-center fw-semibold text-success"
+
+                            <!-- Received cases -->
+                            <td class="text-center fw-semibold text-success"
                                 th:text="${item.receivedCases ?: 0}"></td>
-                            <td class="small text-center"
+
+                            <!-- Shortage -->
+                            <td class="text-center"
                                 th:classappend="${item.hasShortage} ? 'fw-bold text-danger' : 'text-muted'"
                                 th:text="${item.shortageCases ?: 0}">
                             </td>
-                            <td class="small text-center"
+
+                            <!-- Breakage -->
+                            <td class="text-center"
                                 th:classappend="${item.hasBreakage} ? 'fw-bold text-warning' : 'text-muted'"
                                 th:text="${item.breakageQty ?: 0}">
                             </td>
-                            <td class="small text-center fw-bold text-primary"
+
+                            <!-- Net bottles -->
+                            <td class="text-center fw-bold text-primary"
                                 th:text="${item.receivedBottles ?: 0}"></td>
-                            <td class="small"
-                                th:text="${item.mrpPerBottle != null ?
-                                    '₹' + item.mrpPerBottle : '—'}">
+
+                            <!-- MRP per bottle -->
+                            <td class="text-end small"
+                                th:text="${item.mrpPerBottle != null and item.mrpPerBottle > 0 ?
+                                    '₹' + #numbers.formatDecimal(item.mrpPerBottle, 1, 2) : '—'}">
                             </td>
-                            <td class="pe-3">
+
+                            <!-- Rate per case -->
+                            <td class="text-end small"
+                                th:text="${item.ratePerCase != null and item.ratePerCase > 0 ?
+                                    '₹' + #numbers.formatInteger(item.ratePerCase, 1, 'COMMA') : '—'}">
+                            </td>
+
+                            <!-- Line total -->
+                            <td class="text-end fw-semibold pe-3"
+                                th:text="${item.lineTotal != null and item.lineTotal > 0 ?
+                                    '₹' + #numbers.formatInteger(item.lineTotal, 1, 'COMMA') : '—'}">
+                            </td>
+
+                            <!-- Stockroom status -->
+                            <td class="text-center">
                                 <span th:if="${item.postedToStockroom}"
                                       class="badge bg-success">
                                     <i class="bi bi-check-circle"></i> Posted
@@ -229,18 +330,44 @@
                             </td>
                         </tr>
                     </tbody>
+                    <!-- Footer totals row -->
+                    <tfoot class="table-light fw-semibold">
+                        <tr>
+                            <td colspan="6" class="ps-3 text-end text-muted small">Totals</td>
+                            <td class="text-center"
+                                th:text="${invoice.totalInvoicedCases}"></td>
+                            <td class="text-center text-success"
+                                th:text="${invoice.totalReceivedCases}"></td>
+                            <td class="text-center text-danger"
+                                th:text="${invoice.totalShortageCases}"></td>
+                            <td class="text-center text-warning"
+                                th:text="${invoice.totalBreakage}"></td>
+                            <td colspan="4" class="text-end pe-3">
+                                <span th:text="${invoice.totalAmount != null ?
+                                    '₹' + #numbers.formatInteger(invoice.totalAmount, 1, 'COMMA') : ''}">
+                                </span>
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
     </div>
 
-    <div class="d-flex gap-2 mb-5">
+    <!-- ── Action buttons ───────────────────────────────────────────────── -->
+    <div class="d-flex gap-2 mb-5 flex-wrap">
         <a th:href="@{/invoices}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Back to Invoices
         </a>
         <a th:href="@{/invoices/{id}/pdf(id=${invoice.id})}"
            class="btn btn-outline-primary" target="_blank">
             <i class="bi bi-file-earmark-pdf"></i> View Original PDF
+        </a>
+        <a th:if="${invoice.status.name() == 'PENDING'}"
+           th:href="@{/invoices/{id}/confirm(id=${invoice.id})}"
+           class="btn btn-success ms-auto">
+            <i class="bi bi-check-circle"></i> Confirm &amp; Post to Stockroom
         </a>
     </div>
 

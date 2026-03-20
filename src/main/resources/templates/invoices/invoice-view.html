@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice View</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: #eef2f7;
+        }
+
+        .invoice-container {
+            background: #fff;
+            padding: 30px;
+            border-radius: 14px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        }
+
+        .title {
+            font-weight: 700;
+            font-size: 20px;
+        }
+
+        .section-title {
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .table th {
+            background: #f5f7fa;
+            font-size: 14px;
+        }
+
+        .table td {
+            font-size: 14px;
+        }
+
+        .amount-box {
+            background: #fafafa;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .amount-box p {
+            margin: 5px 0;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: #0d6efd;
+        }
+
+        @media print {
+            body {
+                background: #fff;
+            }
+            .no-print {
+                display: none;
+            }
+            .invoice-container {
+                box-shadow: none;
+                border: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container my-4">
+
+    <!-- 🔹 ACTION BAR -->
+    <div class="d-flex justify-content-between mb-3 no-print">
+        <h3>Invoice Viewer</h3>
+
+        <div>
+            <button class="btn btn-primary me-2" onclick="window.print()">
+                <i class="bi bi-printer"></i> Print
+            </button>
+
+            <a href="/" class="btn btn-secondary">
+                <i class="bi bi-upload"></i> Upload New
+            </a>
+        </div>
+    </div>
+
+    <div class="invoice-container">
+
+        <!-- 🔹 HEADER -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="title">Invoice Cum Delivery Challan</div>
+                <p class="mb-1"><b>Invoice No:</b> <span th:text="${invoice.invoiceNumber}"></span></p>
+                <p class="mb-1"><b>Date:</b> <span th:text="${invoice.invoiceDate}"></span></p>
+            </div>
+
+            <div class="col-md-6 text-end">
+                <small class="text-muted">System Generated Invoice</small>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- 🔹 RETAILER + LICENSE -->
+        <div class="row">
+
+            <div class="col-md-6">
+                <div class="section-title">Retailer Details</div>
+
+                <p><b>Name:</b> <span th:text="${invoice.retailerName}"></span></p>
+                <p><b>Code:</b> <span th:text="${invoice.retailerCode}"></span></p>
+                <p><b>Address:</b> <span th:text="${invoice.address}"></span></p>
+            </div>
+
+            <div class="col-md-6">
+                <div class="section-title">License Details</div>
+
+                <p><b>License No:</b> <span th:text="${invoice.licenseNo}"></span></p>
+                <p><b>Name:</b> <span th:text="${invoice.licenseName}"></span></p>
+                <p><b>Phone:</b> <span th:text="${invoice.licensePhone}"></span></p>
+            </div>
+
+        </div>
+
+        <!-- 🔹 ITEMS TABLE -->
+        <div class="section-title">Items</div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle">
+
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Brand</th>
+                    <th>Category</th>
+                    <th>Pack</th>
+                    <th>Cases</th>
+                    <th>Bottles</th>
+                    <th>Rate</th>
+                    <th>Total</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                <tr th:each="item, stat : ${invoice.items}">
+                    <td th:text="${stat.count}"></td>
+                    <td th:text="${item.brandName}"></td>
+                    <td th:text="${item.category}"></td>
+                    <td th:text="${item.pack}"></td>
+                    <td th:text="${item.casesQty}"></td>
+                    <td th:text="${item.bottlesQty}"></td>
+                    <td>₹ <span th:text="${item.rate}"></span></td>
+                    <td>₹ <span th:text="${item.total}"></span></td>
+                </tr>
+                </tbody>
+
+            </table>
+        </div>
+
+        <!-- 🔹 SUMMARY -->
+        <div class="row">
+
+            <!-- CASE SUMMARY -->
+            <div class="col-md-6">
+                <div class="section-title">Case Summary</div>
+
+                <table class="table table-bordered w-75">
+                    <tr>
+                        <th></th>
+                        <th>Cases</th>
+                        <th>Bottles</th>
+                    </tr>
+                    <tr>
+                        <td><b>IMFL</b></td>
+                        <td th:text="${invoice.imflCases}"></td>
+                        <td th:text="${invoice.imflBottles}"></td>
+                    </tr>
+                    <tr>
+                        <td><b>Beer</b></td>
+                        <td th:text="${invoice.beerCases}"></td>
+                        <td th:text="${invoice.beerBottles}"></td>
+                    </tr>
+                    <tr>
+                        <td><b>Total</b></td>
+                        <td th:text="${invoice.totalCases}"></td>
+                        <td th:text="${invoice.totalBottles}"></td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- FINANCIAL -->
+            <div class="col-md-6">
+                <div class="section-title">Financial Details</div>
+
+				<div class="amount-box">
+
+				    <p><b>Invoice Value:</b> ₹ <span th:text="${invoice.invoiceValue}"></span></p>
+
+				    <p><b>MRP Rounding Off:</b> ₹ 
+				        <span th:text="${invoice.mrpRounding}"></span>
+				    </p>
+
+				    <!-- ✅ ONLY ONE NET INVOICE -->
+					<p class="highlight">
+					    <b>Net Invoice Value:</b> ₹ 
+					    <span th:text="${invoice.totalAmount}"></span>
+					</p>
+
+				    <hr>
+
+				    <p><b>E-Challan:</b> ₹ <span th:text="${invoice.echallan}"></span></p>
+				    <p><b>Previous Credit:</b> ₹ <span th:text="${invoice.previousCredit}"></span></p>
+				    <p><b>Sub Total:</b> ₹ <span th:text="${invoice.subtotal}"></span></p>
+				    <p><b>Less Invoice:</b> ₹ <span th:text="${invoice.lessInvoice}"></span></p>
+				    <p><b>Special Cess:</b> ₹ <span th:text="${invoice.specialCess}"></span></p>
+				    <p><b>TCS:</b> ₹ <span th:text="${invoice.tcs}"></span></p>
+
+				    <hr>
+
+				    <p class="highlight">
+				        <b>Retailer Credit Balance:</b> ₹ 
+				        <span th:text="${invoice.retailerCreditBalance}"></span>
+				    </p>
+
+				</div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<!-- 🔹 JS -->
+<script>
+    // Auto number formatting (Indian format)
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll("span").forEach(el => {
+            let val = el.innerText;
+
+            if (!isNaN(val) && val !== "") {
+                el.innerText = Number(val).toLocaleString('en-IN');
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
