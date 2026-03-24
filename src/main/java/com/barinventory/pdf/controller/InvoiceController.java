@@ -16,39 +16,38 @@ import com.barinventory.pdf.service.InvoiceProcessingService;
 @RequestMapping("/invoices")
 public class InvoiceController {
 
-    @Autowired
-    private InvoiceProcessingService service;
+	@Autowired
+	private InvoiceProcessingService service;
 
-    // ✅ GET /invoices/upload
-    @GetMapping("/upload")
-    public String showUploadPage() {
-        // Now looking inside templates/invoices/upload.html
-        return "invoices/invoice-upload";
-    }
-    @GetMapping
-    public String redirect() {
-        return "redirect:/invoices/upload"; // ✅ not /invoices/invoice-upload
-    }
+	// ✅ GET /invoices/upload
+	@GetMapping("/upload")
+	public String showUploadPage() {
+		// Now looking inside templates/invoices/upload.html
+		return "invoices/invoice-upload";
+	}
 
-    // ✅ POST /invoices/upload
-    @PostMapping("/upload")
-    public String upload(@RequestParam("file") MultipartFile file, Model model) {
+	@GetMapping
+	public String redirect() {
+		return "redirect:/invoices/upload"; // ✅ not /invoices/invoice-upload
+	}
 
-        if (file.isEmpty()) {
-            model.addAttribute("error", "Please select a PDF file");
-            return "invoices/invoice-upload";
-        }
+	@PostMapping("/upload")
+	public String uploadInvoices(@RequestParam("files") MultipartFile[] files, Model model) {
+	    if (files == null || files.length == 0 || files[0].isEmpty()) {
+	        model.addAttribute("error", "No files selected");
+	        return "invoices/invoice-upload";
+	    }
 
-        try {
-            Invoice invoice = service.processInvoice(file);
-            model.addAttribute("invoice", invoice);
-            // Now looking inside templates/invoices/invoice-view.html
-            return "invoices/invoice-view";
-        } catch (Exception e) {
-            model.addAttribute("error", "Failed: " + e.getMessage());
-            return "invoices/invoice-upload";
-        }
-    }
+	    try {
+	        // Process the first file and add result to model
+	        Invoice invoice = service.processInvoice(files[0]);
+	        model.addAttribute("invoice", invoice);  // ← THIS was missing
+	        return "invoices/invoice-view";
 
-     
+	    } catch (Exception e) {
+	        model.addAttribute("error", "Failed to process invoice: " + e.getMessage());
+	        return "invoices/invoice-upload";
+	    }
+	}
+
 }

@@ -151,10 +151,10 @@
 </div>
 
 <!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
     let selectedFiles = [];
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
     const dropZone = document.getElementById('dropZone');
     const pdfFiles = document.getElementById('pdfFiles');
     const uploadBtn = document.getElementById('uploadBtn');
@@ -162,24 +162,63 @@
     const fileList = document.getElementById('fileList');
     const fileChips = document.getElementById('fileChips');
     const fileCount = document.getElementById('fileCount');
+    const form = document.getElementById('uploadForm');
 
     // Drag & Drop
-    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-    dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+    dropZone.addEventListener('dragover', e => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
     dropZone.addEventListener('drop', e => {
         e.preventDefault();
         dropZone.classList.remove('dragover');
-        const files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.pdf'));
-        if(files.length > 0) setFiles(files);
+
+        const files = Array.from(e.dataTransfer.files);
+        handleFiles(files);
     });
 
     // File select
-    pdfFiles.addEventListener('change', () => { setFiles(Array.from(pdfFiles.files)); });
+    pdfFiles.addEventListener('change', () => {
+        handleFiles(Array.from(pdfFiles.files));
+    });
+
+    function handleFiles(files) {
+        const validFiles = [];
+        const names = new Set();
+
+        files.forEach(file => {
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                alert("Only PDF files allowed: " + file.name);
+                return;
+            }
+
+            if (file.size > MAX_SIZE) {
+                alert("File too large (max 10MB): " + file.name);
+                return;
+            }
+
+            if (names.has(file.name)) return; // prevent duplicates
+            names.add(file.name);
+
+            validFiles.push(file);
+        });
+
+        if (validFiles.length > 0) {
+            setFiles(validFiles);
+        }
+    }
 
     function setFiles(files) {
         selectedFiles = files;
+
         fileList.style.display = 'block';
         fileCount.textContent = files.length + ' file(s) selected';
+
         fileChips.innerHTML = '';
         files.forEach(f => {
             const chip = document.createElement('span');
@@ -187,9 +226,12 @@
             chip.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> ' + f.name;
             fileChips.appendChild(chip);
         });
+
         dropZone.classList.add('has-files');
+
         uploadBtn.disabled = false;
-        uploadBtnText.textContent = files.length === 1 ? 'Upload Invoice' : 'Upload ' + files.length + ' Invoices';
+        uploadBtnText.textContent =
+            files.length === 1 ? 'Upload Invoice' : 'Upload ' + files.length + ' Invoices';
     }
 
     function clearFiles() {
@@ -197,10 +239,25 @@
         fileList.style.display = 'none';
         fileChips.innerHTML = '';
         pdfFiles.value = '';
+
         uploadBtn.disabled = true;
         uploadBtnText.textContent = 'Select files to upload';
         dropZone.classList.remove('has-files');
     }
+
+    // 🔥 Form Submit UX Improvement
+    form.addEventListener('submit', function (e) {
+        if (selectedFiles.length === 0) {
+            e.preventDefault();
+            alert("Please select at least one PDF file.");
+            return;
+        }
+
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = `
+            <span class="spinner-border spinner-border-sm"></span>
+            Uploading...
+        `;
+    });
 </script>
-</body>
 </html>
