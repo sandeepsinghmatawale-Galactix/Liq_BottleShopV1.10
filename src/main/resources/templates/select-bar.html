@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Select Your Bar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        /* Reset & Body */
+        * { box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', sans-serif;
+            padding: 2rem 1rem;
+        }
+
+        /* Wrapper & Card */
+        .wrapper { width: 100%; max-width: 760px; }
+        .card-wrapper {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem 2rem 2.5rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+        }
+
+        /* Top Logo */
+        .top-logo { text-align: center; margin-bottom: 2rem; color: white; }
+        .top-logo i { font-size: 2.4rem; opacity: 0.95; }
+        .top-logo h2 { font-weight: 700; font-size: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.25rem; }
+        .top-logo p { font-size: 0.92rem; opacity: 0.85; margin: 0; }
+
+        /* User Row */
+        .user-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; }
+        .user-avatar {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #a18cd1, #764ba2);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: 700; font-size: 1rem; flex-shrink: 0;
+        }
+        .user-name { font-weight: 600; font-size: 0.95rem; color: #1e0b3b; line-height: 1.2; }
+        .user-role { font-size: 0.78rem; color: #9c8ec1; }
+        .logout-link { margin-left: auto; font-size: 0.8rem; color: #c0a0e0; text-decoration: none; display: flex; align-items: center; gap: 4px; }
+        .logout-link:hover { color: #764ba2; }
+
+        /* Section & Grid */
+        .section-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9c8ec1; margin-bottom: 1.1rem; }
+        .bar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+
+        /* Bar Card */
+        .bar-card {
+            border: 1.5px solid #e8e0f5;
+            border-radius: 14px;
+            padding: 1.25rem 1.1rem;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            transition: border-color 0.18s, background 0.18s, transform 0.15s;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            background: #fdfbff;
+            position: relative;
+        }
+        .bar-card:hover { border-color: #764ba2; background: #f5eeff; transform: translateY(-2px); }
+        .bar-card.active-bar { border-color: #764ba2; background: #f0e8ff; }
+
+        .bar-icon {
+            width: 42px; height: 42px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #a18cd1, #764ba2);
+            display: flex; align-items: center; justify-content: center; color: white; font-size: 1.1rem;
+        }
+        .bar-name { font-weight: 700; font-size: 0.97rem; color: #1e0b3b; line-height: 1.3; }
+        .bar-city { font-size: 0.8rem; color: #8a6faa; display: flex; align-items: center; gap: 4px; }
+        .bar-type-badge { display: inline-block; font-size: 0.7rem; font-weight: 600; padding: 2px 9px; border-radius: 20px; background: #ede5f9; color: #5a2d91; width: fit-content; }
+        .active-pill { position: absolute; top: 10px; right: 10px; font-size: 0.68rem; font-weight: 700; background: #e8f8f0; color: #1a7a4a; border: 1px solid #b8ecd4; padding: 2px 8px; border-radius: 20px; }
+
+        .divider { border: none; border-top: 1.5px solid #f0e8ff; margin: 1.6rem 0; }
+        .no-bars { text-align: center; padding: 2rem 1rem; color: #b0a0c8; }
+        .no-bars i { font-size: 2rem; margin-bottom: 0.75rem; display: block; }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+
+    <!-- Top Logo -->
+    <div class="top-logo">
+        <i class="bi bi-shop-window"></i>
+        <h2>Liquor Inventory</h2>
+        <p>Select a bar location to continue</p>
+    </div>
+
+    <!-- Main Card -->
+    <div class="card-wrapper">
+
+        <!-- User Row -->
+        <div class="user-row">
+            <div class="user-avatar"
+                 th:text="${#strings.toUpperCase(#strings.substring(currentUser.name, 0, 1))}">A</div>
+            <div>
+                <div class="user-name" th:text="${currentUser.name}">Bar Owner</div>
+                <div class="user-role" th:text="${currentUser.role}">BAR_OWNER</div>
+            </div>
+            <a href="/logout" class="logout-link">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </a>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Bar Section Label -->
+        <div class="section-label">
+            <i class="bi bi-geo-alt-fill me-1"></i>Your bar locations
+        </div>
+
+        <!-- No bars fallback -->
+        <div class="no-bars" th:if="${#lists.isEmpty(bars)}">
+            <i class="bi bi-exclamation-circle"></i>
+            <p>No bar locations assigned to your account.<br>
+               Please contact your administrator.</p>
+        </div>
+
+        <!-- Bar Cards Grid -->
+        <div class="bar-grid" th:if="${not #lists.isEmpty(bars)}">
+            <a th:each="bar : ${bars}"
+               th:href="@{/select-bar/activate/{id}(id=${bar.barId})}"
+               class="bar-card"
+               th:classappend="${bar.barId == activeBarId} ? 'active-bar' : ''">
+
+                <span class="active-pill" th:if="${bar.barId == activeBarId}">Active</span>
+
+                <div class="bar-icon"><i class="bi bi-shop"></i></div>
+                <div class="bar-name" th:text="${bar.barName}">Bar Name</div>
+                <div class="bar-city" th:if="${bar.city != null and !bar.city.isEmpty()}">
+                    <i class="bi bi-geo-alt" style="font-size:11px;"></i>
+                    <span th:text="${bar.city}">City</span>
+                </div>
+                <div class="bar-type-badge" th:if="${bar.barType != null}" th:text="${#strings.replace(bar.barType,'_',' ')}">Type</div>
+
+            </a>
+        </div>
+
+        <hr class="divider" th:if="${not #lists.isEmpty(bars)}">
+
+        <p class="text-center mb-0" style="font-size:0.8rem; color:#b0a0c8;" th:if="${not #lists.isEmpty(bars)}">
+            <i class="bi bi-info-circle me-1"></i>
+            You can switch locations anytime from the navbar.
+        </p>
+
+    </div>
+</div>
+
+</body>
+</html>

@@ -93,10 +93,11 @@ public class Bar {
     @Builder.Default
     private List<BarWell> wells = new ArrayList<>();
 
-    @OneToMany(mappedBy = "bar", fetch = FetchType.LAZY)
+ // ✅ Correct — mapped through UserBarAccess
+    @OneToMany(mappedBy = "bar", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JsonIgnore
     @Builder.Default
-    private List<User> users = new ArrayList<>();
+    private List<UserBarAccess> userAccesses = new ArrayList<>();
 
     @OneToMany(mappedBy = "bar")
     @JsonIgnore

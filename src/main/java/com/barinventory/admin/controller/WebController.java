@@ -1,23 +1,34 @@
 package com.barinventory.admin.controller;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 
-import com.barinventory.admin.entity.*;
-import com.barinventory.admin.repository.*;
-import com.barinventory.admin.service.*;
+import com.barinventory.admin.entity.Bar;
+import com.barinventory.admin.entity.Role;
+import com.barinventory.admin.entity.User;
+import com.barinventory.admin.entity.UserBarAccess;
+import com.barinventory.admin.repository.BarRepository;
+import com.barinventory.admin.repository.BarWellRepository;
+import com.barinventory.admin.repository.UserBarAccessRepository;
+import com.barinventory.admin.repository.UserRepository;
+import com.barinventory.admin.service.BarService;
+import com.barinventory.admin.service.BrandSizeProductService;
+import com.barinventory.admin.service.InventorySessionService;
+import com.barinventory.admin.service.PricingService;
+import com.barinventory.admin.service.ProductService;
+import com.barinventory.admin.service.ReportService;
 
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
 @Controller
@@ -31,44 +42,95 @@ public class WebController {
     private final PricingService pricingService;
     private final InventorySessionService sessionService;
     private final ReportService reportService;
+
     private final UserRepository userRepository;
     private final BarRepository barRepository;
     private final BarWellRepository barWellRepository;
     private final BrandSizeProductService brandSizeProductService;
+    private final UserBarAccessRepository userBarAccessRepository;
+
+    // ================= GLOBAL ATTRIBUTES =================
+    @ModelAttribute
+    public void addGlobalAttributes(@AuthenticationPrincipal User user,
+                                    HttpSession session,
+                                    Model model) {
+        if (user != null) {
+
+            // Use repository or service to fetch bars
+            List<Bar> userBars = userBarAccessRepository
+                    .findByUser_IdAndActiveTrue(user.getId())
+                    .stream()
+                    .map(UserBarAccess::getBar)
+                    .toList();
+
+            model.addAttribute("currentUser", user);
+            model.addAttribute("currentUserBars", userBars);
+            model.addAttribute("bars", userBars); // for template
+            model.addAttribute("activeBarId", session.getAttribute("activeBarId"));
+            model.addAttribute("activeBarName", session.getAttribute("activeBarName"));
+        }
+    }
 
     // ================= LOGIN =================
-
     @GetMapping("/login")
     public String showLogin() {
         return "login";
     }
 
     // ================= ROOT REDIRECT =================
-
     @GetMapping("/")
     public String redirectToDashboard(Authentication authentication) {
         if (authentication != null
                 && authentication.isAuthenticated()
-                && !(authentication.getPrincipal().equals("anonymousUser"))) {
+                && !"anonymousUser".equals(authentication.getPrincipal())) {
             return "redirect:/dashboard";
         }
         return "redirect:/login";
     }
 
+    // ================= BAR SELECTOR =================
+    @GetMapping("/select-bar")
+    public String selectBar(Model model, @AuthenticationPrincipal User user) {
+        if (user == null) return "redirect:/login";
+
+        // ✅ Correctly fetch active bars for the user
+        List<UserBarAccess> accesses =
+                userBarAccessRepository.findByUser_IdAndActiveTrue(user.getId());
+
+        model.addAttribute("barAccesses", accesses);
+        return "select-bar";
+    }
+
+    @GetMapping("/select-bar/activate/{barId}")
+    public String activateBar(@PathVariable Long barId,
+                              @AuthenticationPrincipal User user,
+                              HttpSession session) {
+
+        if (user == null) return "redirect:/login";
+
+        // ✅ Validate user has access
+        barService.validateUserBarAccess(user, barId);
+
+        Bar bar = barService.getBarById(barId);
+        session.setAttribute("activeBarId", barId);
+        session.setAttribute("activeBarName", bar.getBarName());
+
+        return "redirect:/dashboard";
+    }
+
     // ================= DASHBOARD =================
-
     @GetMapping("/dashboard")
-    public String showDashboard(@AuthenticationPrincipal User currentUser, Model model) {
+    public String showDashboard(@AuthenticationPrincipal User user,
+                                HttpSession session,
+                                Model model) {
 
-        if (currentUser == null) {
-            return "redirect:/login";
-        }
+        if (user == null) return "redirect:/login";
 
         model.addAttribute("activePage", "dashboard");
-        model.addAttribute("username", currentUser.getName());
-        model.addAttribute("role", currentUser.getRole());
+        model.addAttribute("username", user.getName());
+        model.addAttribute("role", user.getRole());
 
-        if (currentUser.getRole() == Role.ADMIN) {
+        if (user.isAdmin()) {
             List<Bar> bars = barRepository.findAll();
             model.addAttribute("bars", bars);
             model.addAttribute("totalBars", bars.size());
@@ -76,166 +138,36 @@ public class WebController {
             return "dashboard";
         }
 
-        Long barId = currentUser.getBarId();
-        if (barId == null) {
-            return "redirect:/login?error=bar_not_assigned";
-        }
+        Long activeBarId = (Long) session.getAttribute("activeBarId");
+        if (activeBarId == null) return "redirect:/select-bar";
 
-        Bar bar = barService.getBarById(barId);
-        if (bar == null) {
-            return "redirect:/login?error=invalid_bar";
-        }
-
+        barService.validateUserBarAccess(user, activeBarId);
+        Bar bar = barService.getBarById(activeBarId);
         model.addAttribute("bar", bar);
-        model.addAttribute("barId", barId);
+        model.addAttribute("barId", activeBarId);
 
-        if (currentUser.getRole() == Role.BAR_OWNER) {
-            long staffCount = userRepository.countByBar_BarIdAndRole(barId, Role.BAR_STAFF);
+        // ✅ Check if user is BAR OWNER
+        boolean isOwner = userBarAccessRepository
+                .findByBar_BarIdAndActiveTrue(activeBarId)
+                .stream()
+                .anyMatch(a -> a.getUser().getId().equals(user.getId())
+                        && a.getBarRole() == Role.BAR_OWNER);
+
+        if (isOwner) {
+            long staffCount = userBarAccessRepository
+                    .countByBar_BarIdAndBarRole(activeBarId, Role.BAR_STAFF);
             model.addAttribute("staffCount", staffCount);
         }
 
         return "dashboard";
     }
 
-    // ================= BILLING =================
-
-    
-    
-    @GetMapping("/billing")
-    public String billingPage(Model model) {
-        model.addAttribute("activePage", "billing");
-        return "billing";
-    }
-
-    // ================= INVOICES =================
-
-    
-    // ================= ADMIN BAR REGISTER =================
-
-    @GetMapping("/admin/bars/register")
-    public String showRegisterBar(Model model) {
-        model.addAttribute("barTypes", List.of("STANDALONE", "HOTEL_BAR", "RESTAURANT_BAR", "CLUB", "OTHER"));
-        model.addAttribute("shiftConfigs", List.of("SINGLE", "DOUBLE"));
-        return "admin/bar-register";
-    }
-
-    @PostMapping("/admin/bars/register")
-    public String saveRegisterBar(@RequestParam Map<String, String> form) {
-
-        Bar bar = Bar.builder()
-                .barName(form.get("barName"))
-                .barType(form.get("barType"))
-                .ownerName(form.get("ownerName"))
-                .contactNumber(form.get("contactNumber"))
-                .email(form.get("email"))
-                .city(form.get("city"))
-                .active(false)
-                .build();
-
-        Bar saved = barService.createBar(bar);
-        return "redirect:/admin/bars/" + saved.getBarId() + "/wells-config";
-    }
-
-    // ================= STOCKROOM =================
-
-    @GetMapping("/stockroom/{sessionId}")
-    public String viewStockroom(@PathVariable Long sessionId, Model model) {
-
-        InventorySession inv = sessionService.getSession(sessionId);
-        List<Product> products = productService.getAllActiveProducts();
-
-        model.addAttribute("inv", inv);
-        model.addAttribute("products", products);
-
-        return "stockroom";
-    }
-
-    @PostMapping("/stockroom/{sessionId}")
-    public String saveStockroom(@PathVariable Long sessionId,
-                               @RequestParam Map<String, String> formData,
-                               Model model) {
-
-        try {
-            InventorySession inv = sessionService.getSession(sessionId);
-            List<Product> products = productService.getAllActiveProducts();
-            List<StockroomInventory> inventories = new ArrayList<>();
-
-            for (Product product : products) {
-
-                BigDecimal opening = parseDecimal(formData.get("opening_" + product.getProductId()));
-                BigDecimal received = parseDecimal(formData.get("received_" + product.getProductId()));
-                BigDecimal closing = parseDecimal(formData.get("closing_" + product.getProductId()));
-
-                StockroomInventory inventory = StockroomInventory.builder()
-                        .session(inv)
-                        .product(product)
-                        .openingStock(opening)
-                        .receivedStock(received)
-                        .closingStock(closing)
-                        .build();
-
-                inventories.add(inventory);
-            }
-
-            sessionService.saveStockroomInventory(sessionId, inventories);
-
-            return "redirect:/dashboard";
-
-        } catch (Exception e) {
-            log.error("Error saving stockroom", e);
-            model.addAttribute("error", e.getMessage());
-            return "stockroom";
-        }
-    }
-
-    // ================= PRODUCTS =================
-
-    @GetMapping("/products")
-    public String listProducts(Model model) {
-        model.addAttribute("products", productService.getAllActiveProducts());
-        return "list";
-    }
-
-    @GetMapping("/products/new")
-    public String newProductForm() {
-        return "productNew";
-    }
-
-    @PostMapping("/products/new")
-    public String createProduct(@RequestParam String productName,
-                               @RequestParam String category) {
-
-        Product product = Product.builder()
-                .productName(productName)
-                .category(category)
-                .active(true)
-                .build();
-
-        productService.createProduct(product);
-        return "redirect:/products";
-    }
-
-    // ================= REPORT =================
-
-    @GetMapping("/reports/{barId}/daily")
-    public String dailyReport(@PathVariable Long barId,
-                             @RequestParam(required = false) String date,
-                             Model model) {
-
-        LocalDateTime reportDate =
-                date != null ? LocalDateTime.parse(date) : LocalDateTime.now();
-
-        model.addAttribute("report",
-                reportService.getDailySalesReport(barId, reportDate));
-
-        return "reports/daily";
-    }
-
     // ================= HELPER =================
-
     private BigDecimal parseDecimal(String value) {
         return (value != null && !value.isEmpty())
                 ? new BigDecimal(value)
                 : BigDecimal.ZERO;
     }
+
+    
 }

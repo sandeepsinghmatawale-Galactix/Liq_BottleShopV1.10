@@ -22,11 +22,17 @@ public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
 
+    // =================================================================================
+    // PASSWORD ENCODER
+    // =================================================================================
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(10);
     }
 
+    // =================================================================================
+    // AUTH PROVIDER
+    // =================================================================================
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -35,50 +41,100 @@ public class SecurityConfig {
         return authProvider;
     }
 
+    // =================================================================================
+    // AUTH MANAGER
+    // =================================================================================
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
+    // =================================================================================
+    // SECURITY FILTER CHAIN
+    // =================================================================================
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
-            // ✅ Disable CSRF only for REST API endpoints (fetch calls from JS)
+
+            // =================================================================================
+            // CSRF CONFIG
+            // =================================================================================
             .csrf(csrf -> csrf
                 .ignoringRequestMatchers("/api/**", "/sessions/wells/*/save")
             )
+
+            // =================================================================================
+            // AUTH PROVIDER
+            // =================================================================================
             .authenticationProvider(authenticationProvider())
+
+            // =================================================================================
+            // AUTHORIZATION RULES
+            // =================================================================================
             .authorizeHttpRequests(auth -> auth
-                // ✅ Public static resources
+
+                // ✅ Static resources
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
+
                 // ✅ Public pages
                 .requestMatchers("/login", "/error", "/").permitAll()
                 .requestMatchers("/invoices/**").permitAll()
-                // ✅ Dashboard - all authenticated roles
-                .requestMatchers("/dashboard").hasAnyRole("ADMIN", "BAR_OWNER", "BAR_STAFF")
-                // ✅ Admin only
+
+                // ✅ IMPORTANT: Allow select-bar flow
+                .requestMatchers("/select-bar", "/switch-bar/**").authenticated()
+
+                // ✅ Dashboard (requires login + bar selection handled in controller)
+                .requestMatchers("/dashboard").authenticated()
+
+                // ✅ Admin only (GLOBAL role)
                 .requestMatchers("/admin/**").hasRole("ADMIN")
-                // ✅ Bar management
-                .requestMatchers("/bars/new", "/bars/edit/**").hasAnyRole("ADMIN", "BAR_OWNER")
-                // ✅ Inventory flows
+
+                // ✅ Bar-related modules (controlled via JOIN table logic)
                 .requestMatchers(
-                    "/sessions/**",
-                    "/stockroom/**",
-                    "/inventory/**",
-                    "/api/**"           // ✅ covers /api/sessions/{id}/commit
-                ).hasAnyRole("ADMIN", "BAR_OWNER", "BAR_STAFF")
-                // ✅ Everything else requires login
+                        "/bars/**",
+                        "/sessions/**",
+                        "/stockroom/**",
+                        "/inventory/**",
+                        "/api/**"
+                ).authenticated()
+
+                // ✅ Everything else
                 .anyRequest().authenticated()
             )
+
+            // =================================================================================
+            // LOGIN CONFIG
+            // =================================================================================
             .formLogin(form -> form
                 .loginPage("/login")
                 .loginProcessingUrl("/login")
                 .usernameParameter("email")
                 .passwordParameter("password")
-                .defaultSuccessUrl("/dashboard", true)
+
+                // ✅ FINAL SUCCESS HANDLER (MULTI-BAR FLOW)
+                .successHandler((request, response, authentication) -> {
+
+                    com.barinventory.admin.entity.User user =
+                            (com.barinventory.admin.entity.User) authentication.getPrincipal();
+
+                    // 👉 If system ADMIN → go directly
+                    if (user.getRole().name().equals("ADMIN")) {
+                        response.sendRedirect("/dashboard");
+                        return;
+                    }
+
+                    // 👉 Otherwise → select bar
+                    response.sendRedirect("/select-bar");
+                })
+
                 .failureUrl("/login?error=true")
                 .permitAll()
             )
+
+            // =================================================================================
+            // LOGOUT CONFIG
+            // =================================================================================
             .logout(logout -> logout
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/login?logout=true")
@@ -86,22 +142,33 @@ public class SecurityConfig {
                 .deleteCookies("JSESSIONID")
                 .permitAll()
             )
+
+            // =================================================================================
+            // SESSION MANAGEMENT
+            // =================================================================================
             .sessionManagement(session -> session
                 .maximumSessions(1)
                 .maxSessionsPreventsLogin(false)
             )
-            // ✅ Proper 403 handler - redirects to login with error instead of whitelabel
+
+            // =================================================================================
+            // EXCEPTION HANDLING
+            // =================================================================================
             .exceptionHandling(ex -> ex
                 .accessDeniedHandler((request, response, accessDeniedException) -> {
+
                     String uri = request.getRequestURI();
-                    // ✅ API calls get JSON error, not redirect
+
+                    // ✅ API → JSON
                     if (uri.startsWith("/api/")) {
                         response.setStatus(403);
                         response.setContentType("application/json");
                         response.getWriter().write(
                             "{\"error\":\"Forbidden\",\"path\":\"" + uri + "\"}"
                         );
-                    } else {
+                    } 
+                    // ✅ UI → redirect
+                    else {
                         response.sendRedirect("/login?error=403");
                     }
                 })

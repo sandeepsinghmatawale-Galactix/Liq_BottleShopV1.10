@@ -3,11 +3,14 @@ package com.barinventory.admin.service;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.barinventory.admin.entity.Bar;
 import com.barinventory.admin.entity.BarWell;
+import com.barinventory.admin.entity.User;
+import com.barinventory.admin.entity.UserBarAccess;
 import com.barinventory.admin.repository.BarRepository;
 import com.barinventory.admin.repository.BarWellRepository;
 
@@ -89,5 +92,21 @@ public class BarService {
         bar.setSetupComplete(true);
         bar.setOnboardingStep("COMPLETE");
         barRepository.save(bar);
+    }
+    
+ // All bars a specific user owns/has access to
+    @Transactional
+    public List<Bar> getBarsForUser(User user) {
+        return user.getBarAccesses().stream()
+                   .filter(UserBarAccess::isActive)
+                   .map(UserBarAccess::getBar)
+                   .toList();
+    }
+    // Validate bar belongs to user — call this on EVERY request
+    public void validateUserBarAccess(User user, Long barId) {
+        if (user.isAdmin()) return;
+        boolean hasAccess = user.getBars().stream()
+            .anyMatch(b -> b.getBarId().equals(barId));
+        if (!hasAccess) throw new AccessDeniedException("No access to this bar");
     }
 }

@@ -6,10 +6,7 @@ import com.barinventory.admin.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.userdetails.*;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +19,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
 
         log.info("Attempting to load user by email: {}", email);
-        
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> {
@@ -35,15 +31,12 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             throw new UsernameNotFoundException("Account is disabled");
         }
 
-        log.info("User loaded successfully: {} with role: {}", email, user.getRole());
-        
-        log.info("User active: {}, role: {}, barId: {}, passwordHash: {}", 
-        	    user.getActive(), 
-        	    user.getRole(), 
-        	    user.getBarId(),
-        	    user.getPassword().substring(0, 10)); // just first 10 chars
+        // ✅ SAFE LOGGING (NO LAZY CALLS)
+        log.info("User loaded: email={}, role={}, active={}", 
+                user.getEmail(), 
+                user.getRole(), 
+                user.getActive());
 
-        // ✅ RETURN YOUR ENTITY DIRECTLY
-        return user;
+        return user; // ✅ DO NOT TOUCH RELATIONS HERE
     }
 }

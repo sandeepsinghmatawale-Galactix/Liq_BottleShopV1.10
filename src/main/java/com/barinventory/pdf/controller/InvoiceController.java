@@ -49,5 +49,31 @@ public class InvoiceController {
 	        return "invoices/invoice-upload";
 	    }
 	}
+	/*   For MULTI-INVOICE PDF UPLOAD
+	 * @PostMapping("/upload")
+public String uploadInvoices(@RequestParam("files") MultipartFile[] files,
+                              RedirectAttributes redirectAttrs) {
+    try {
+        Invoice last = null;
+        for (MultipartFile file : files) {
+            if (!file.isEmpty()) {
+                last = service.processInvoice(file);
+            }
+        }
+        if (last != null) {
+            return "redirect:/invoices/" + last.getId();  // redirect to view page
+        }
+    } catch (Exception e) {
+        redirectAttrs.addFlashAttribute("error", e.getMessage());
+    }
+    return "redirect:/invoices/upload";
+}
+
+// Add a GET handler for viewing by ID
+@GetMapping("/{id}")
+public String viewInvoice(@PathVariable Long id, Model model) {
+    model.addAttribute("invoice", service.getInvoiceById(id));
+    return "invoices/invoice-view";
+}*/
 
 }

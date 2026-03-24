@@ -5,10 +5,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @SpringBootApplication
-public class LiqBottleShopV01Application {
+public class LiqBottleShopV017Application {
 
 	public static void main(String[] args) {
-		SpringApplication.run(LiqBottleShopV01Application.class, args);
+		SpringApplication.run(LiqBottleShopV017Application.class, args);
 		  // ✅ Must match SecurityConfig strength = 10
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
         String raw = "bar123";
