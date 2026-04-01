@@ -8,7 +8,8 @@ import lombok.Data;
  
 public class BrandSizeProductDTO {
 
-	private Long productId; // = BrandSize.id
+ 
+	private Long id;
 	private String productName; // = "Old Monk 750ml"
 	private String category; // = "RUM"
 	private String brand; // = "Old Monk"
@@ -20,7 +21,7 @@ public class BrandSizeProductDTO {
 
 	public BrandSizeProductDTO(Long brandSizeId, String productName, String category, String brand,
 			BigDecimal volumeML) {
-		this.productId = brandSizeId;
+		this.id = brandSizeId;
 		this.productName = productName;
 		this.category = category;
 		this.brand = brand;
@@ -28,8 +29,11 @@ public class BrandSizeProductDTO {
 		this.active = true;
 	}
 
+	public Long getId() {
+        return id;
+    }
 	public Long getProductId() {
-		return productId;
+		return id;
 	}
 
 	public String getProductName() {
@@ -53,7 +57,7 @@ public class BrandSizeProductDTO {
 	}
 
 	public void setProductId(Long v) {
-		this.productId = v;
+		this.id = v;
 	}
 
 	public void setProductName(String v) {

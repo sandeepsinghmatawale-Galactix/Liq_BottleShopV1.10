@@ -103,6 +103,8 @@ public class Bar {
     @JsonIgnore
     private List<InventorySession> sessions;
     
+ 
+    
     public String getStatusClass() {
 
         if (active == null || !active) {

@@ -7,35 +7,17 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        .well-input { width: 90px; text-align: right; }
-        #searchWrapper { position: relative; }
-        #searchResults {
-            display: none; position: absolute; top: calc(100% + 2px);
-            left: 0; right: 0; z-index: 1055; max-height: 300px; overflow-y: auto;
-            background: #fff; border: 1px solid #c8d0da;
-            border-radius: 0 0 6px 6px; box-shadow: 0 6px 18px rgba(0,0,0,.13);
-        }
-        .brand-header {
-            padding: 5px 14px 3px; font-size: .75rem; font-weight: 700;
-            letter-spacing: .05em; text-transform: uppercase;
-            color: #198754; background: #f0faf4; border-bottom: 1px solid #ddf0e4;
-        }
-        .size-option {
-            display: flex; align-items: center; gap: 10px;
-            padding: 6px 14px 6px 22px; font-size: .87rem;
-            cursor: pointer; border-bottom: 1px solid #f5f5f5;
-        }
-        .size-option:hover { background: #e9f5ee; }
-        .size-option.is-added { background: #f0faf0; color: #aaa; cursor: default; }
-        .size-mrp { margin-left: auto; color: #198754; font-weight: 600; font-size: .82rem; }
-        th.well-col { background: #0f6e56; text-align: center; min-width: 110px; }
+        .table-input { width: 100px; text-align: right; }
     </style>
 </head>
 <body>
 
 <nav class="navbar navbar-dark bg-success">
     <div class="container-fluid">
-        <span class="navbar-brand"><i class="bi bi-bar-chart-fill"></i> Admin Setup — Well Opening Stock</span>
+        <span class="navbar-brand">
+            <i class="bi bi-cup-straw"></i>
+            Admin Setup — Well Opening Stock
+        </span>
         <span class="text-white small">
             Bar: <strong th:text="${session.bar != null ? session.bar.barName : 'N/A'}"></strong>
             &nbsp;|&nbsp; Session #<span th:text="${sessionId}"></span>
@@ -43,241 +25,84 @@
     </div>
 </nav>
 
-<div class="container mt-4">
-    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+<div class="container-fluid mt-4">
+
+    <div th:if="${error}" class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle"></i>
+        <span th:text="${error}"></span>
+    </div>
 
     <div class="alert alert-info">
         <i class="bi bi-info-circle"></i>
-        Search a brand → click a size → <strong>enter the bottle count at each well</strong>.
-        Leave 0 if a well has none of that brand.
+        <strong>Admin Setup:</strong> Enter the current stock at each bar well for each product.
+        Only enter quantities physically present right now. Leave as <strong>0</strong> if empty.
     </div>
 
     <div class="card shadow">
-        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-2-circle"></i> Step 4b: Well Opening Stock</h5>
-            <span class="badge bg-white text-success" id="itemBadge">0 items</span>
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-2-circle"></i> Step 4b: Well Opening Stock
+            </h5>
         </div>
         <div class="card-body">
 
-            <!-- Search -->
-            <div class="row g-2 mb-3">
-                <div class="col-md-6">
-                    <label class="form-label small fw-semibold">Search Brand</label>
-                    <div id="searchWrapper">
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
-                            <input type="text" id="brandSearch" class="form-control"
-                                   placeholder="e.g. Old Monk, Royal Stag…" autocomplete="off"/>
-                        </div>
-                        <div id="searchResults"></div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold">Category</label>
-                    <select id="catFilter" class="form-select">
-                        <option value="">All Categories</option>
-                        <option>WHISKY</option><option>RUM</option><option>VODKA</option>
-                        <option>GIN</option><option>BRANDY</option><option>BEER</option>
-                        <option>WINE</option><option>TEQUILA</option><option>OTHER</option>
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="button" class="btn btn-outline-secondary w-100" onclick="clearSearch()">
-                        <i class="bi bi-x-lg"></i> Clear
-                    </button>
-                </div>
-            </div>
+            <form th:action="@{/admin/setup/{id}/wells(id=${sessionId})}" method="post">
 
-            <!--
-                Form POSTs:
-                  brandSizeId[]                       — one hidden per row (tracking only)
-                  opening_{productId}_{Well-Name}     — qty per well
-                  e.g. opening_5_Well-1
-                  Matches saveSetupWells:
-                    "opening_" + product.getProductId() + "_" + wellName.replace(" ", "-")
-            -->
-            <form th:action="@{/admin/setup/{id}/wells(id=${sessionId})}" method="post" id="wellForm">
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                <div id="hiddenInputs"></div>
 
                 <div class="table-responsive">
-                    <table class="table table-bordered table-hover align-middle" id="wellTable">
-                        <thead class="table-dark" id="tableHead">
-                            <tr id="headerRow">
+                    <table class="table table-bordered align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Product</th>
                                 <th>Brand</th>
                                 <th>Category</th>
-                                <th>Size</th>
-                                <!-- Well columns injected by JS -->
-                                <th class="text-center">Remove</th>
+                                <th th:each="wellName : ${wellNames}"
+                                    class="text-center"
+                                    th:text="${wellName}">Well</th>
                             </tr>
                         </thead>
-                        <tbody id="tableBody">
-                            <tr id="emptyRow">
-                                <td colspan="10" class="text-center text-muted py-4">
-                                    <i class="bi bi-search me-1"></i>
-                                    Search and add brands above to set well opening stock.
+                        <tbody>
+                            <tr th:each="product : ${products}">
+                                <td>
+                                    <strong th:text="${product.productName}"></strong>
+                                    <small class="d-block text-muted"
+                                           th:if="${product.volumeML != null}"
+                                           th:text="${product.volumeML} + ' ml'"></small>
+                                </td>
+                                <td class="text-muted small" th:text="${product.brand}"></td>
+                                <td th:text="${product.category}"></td>
+                                <td th:each="wellName : ${wellNames}" class="text-center">
+                                    <input type="number"
+                                           class="form-control table-input mx-auto"
+                                           step="0.01" min="0"
+                                           th:name="'opening_' + ${product.productId} + '_' + ${wellName}"
+                                           th:value="${existingStock != null and existingStock[product.productId + '_' + wellName] != null ? existingStock[product.productId + '_' + wellName] : 0}"/>
+                                </td>
+                            </tr>
+                            <tr th:if="${products == null or #lists.isEmpty(products)}">
+                                <td th:colspan="${3 + (wellNames != null ? #lists.size(wellNames) : 1)}"
+                                    class="text-center text-muted">
+                                    No products found.
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <div class="d-flex justify-content-between mt-3">
-                    <a th:href="@{/admin/setup/{id}/stockroom(id=${sessionId})}"
-                       class="btn btn-secondary">
+                <div class="d-flex justify-content-between mt-4">
+                    <a th:href="@{/admin/setup/{id}/stockroom(id=${sessionId})}" class="btn btn-secondary">
                         <i class="bi bi-arrow-left"></i> Back to Stockroom
                     </a>
                     <button type="submit" class="btn btn-success btn-lg">
                         Save &amp; Review →
                     </button>
                 </div>
+
             </form>
         </div>
     </div>
 </div>
-
- 
-<!-- ONLY JS PART UPDATED (rest of your HTML stays SAME) -->
-
-<script th:inline="javascript">
-/*<![CDATA[*/
-
-const wellNames = /*[[${wellNames}]]*/ ['Well-1', 'Well-2'];
-const existingStock = /*[[${existingStockJson}]]*/ {};
-
-const addedMap  = new Map();
-const searchEl  = document.getElementById('brandSearch');
-const resultsEl = document.getElementById('searchResults');
-const catEl     = document.getElementById('catFilter');
-const tbody     = document.getElementById('tableBody');
-const hiddenDiv = document.getElementById('hiddenInputs');
-const badgeEl   = document.getElementById('itemBadge');
-const emptyRow  = document.getElementById('emptyRow');
-let timer = null;
-
-function toId(s) {
-    return s ? String(s).replace(/\s+/g, '-').replace(/[^a-zA-Z0-9_\-]/g, '_') : '';
-}
-function esc(s) {
-    if (!s) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function ea(s) { return s ? String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'") : ''; }
-
-// HEADER BUILD
-(function buildHeaders() {
-    const headerRow  = document.getElementById('headerRow');
-    const removeCell = headerRow.querySelector('th:last-child');
-    wellNames.forEach(w => {
-        const th = document.createElement('th');
-        th.className = 'well-col text-white';
-        th.innerHTML = `${esc(w)}<br><small class="fw-normal">(Bottles)</small>`;
-        headerRow.insertBefore(th, removeCell);
-    });
-})();
-
-searchEl.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(doSearch, 250); });
-catEl.addEventListener('change', doSearch);
-
-async function doSearch() {
-    const q = searchEl.value.trim(), cat = catEl.value;
-    if (!q && !cat) { resultsEl.style.display = 'none'; return; }
-    try {
-        const res = await fetch(`/admin/brands/search?q=${encodeURIComponent(q)}&category=${encodeURIComponent(cat)}`);
-        renderDropdown(await res.json());
-    } catch {
-        resultsEl.innerHTML = '<div class="p-3 text-danger">Search failed</div>';
-        resultsEl.style.display = 'block';
-    }
-}
-
-function renderDropdown(brands) {
-    let html = '';
-    brands.forEach(b => {
-        html += `<div><div class="brand-header">${esc(b.brandName)}</div>`;
-        (b.sizes || []).forEach(s => {
-            const k = String(s.brandSizeId);
-            const isAdded = addedMap.has(k);
-            html += `<div class="size-option ${isAdded ? 'is-added' : ''}"
-                onclick="${isAdded ? '' : `addRow(${s.brandSizeId},${s.productId||0},'${ea(b.brandName)}','${ea(b.category)}','${ea(s.sizeLabel)}')`}">
-                ${isAdded ? 'Added' : 'Add'} ${esc(s.sizeLabel)}
-            </div>`;
-        });
-        html += `</div>`;
-    });
-    resultsEl.innerHTML = html;
-    resultsEl.style.display = 'block';
-}
-
-// ✅ FIXED FUNCTION
-function addRow(brandSizeId, productId, brandName, category, sizeLabel) {
-    const k   = String(brandSizeId);
-    const pid = String(productId);
-
-    if (addedMap.has(k)) return;
-    addedMap.set(k, { pid, wells: {} });
-    emptyRow.style.display = 'none';
-
-    hiddenDiv.insertAdjacentHTML('beforeend',
-        `<input type="hidden" name="brandSizeId" value="${k}" id="hid_id_${k}"/>`);
-
-    let wellCells = '';
-
-    wellNames.forEach(w => {
-        const wNorm = w.replace(/\s+/g, '-'); // ✅ SINGLE SOURCE OF TRUTH
-
-        const fieldName = `opening_${pid}_${wNorm}`;
-        const savedKey  = `${pid}_${wNorm}`;
-        const savedQty  = existingStock[savedKey] ?? 0;
-
-        addedMap.get(k).wells[wNorm] = savedQty;
-
-        wellCells += `
-            <td>
-                <input type="number"
-                       name="${fieldName}"
-                       value="${savedQty}"
-                       class="form-control well-input"
-                       min="0"
-                       oninput="onQty('${k}','${wNorm}',this.value)"/> <!-- ✅ FIX -->
-            </td>`;
-    });
-
-    const tr = document.createElement('tr');
-    tr.id = 'tr_' + k;
-    tr.innerHTML = `
-        <td>${esc(brandName)}</td>
-        <td>${esc(category)}</td>
-        <td>${esc(sizeLabel)}</td>
-        ${wellCells}
-        <td><button type="button" onclick="removeRow('${k}')">X</button></td>
-    `;
-
-    tbody.appendChild(tr);
-    updateBadge();
-}
-
-// ✅ FIXED: no replace here
-function onQty(k, wNorm, v) {
-    const item = addedMap.get(k);
-    if (item) item.wells[wNorm] = parseFloat(v) || 0;
-}
-
-function removeRow(k) {
-    addedMap.delete(k);
-    document.getElementById('tr_' + k)?.remove();
-    document.getElementById('hid_id_' + k)?.remove();
-    if (!addedMap.size) emptyRow.style.display = '';
-    updateBadge();
-}
-
-function updateBadge() {
-    badgeEl.textContent = addedMap.size + ' items';
-}
-
-/*]]>*/
-</script>
-```
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

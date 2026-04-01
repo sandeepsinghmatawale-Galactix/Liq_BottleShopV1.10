@@ -105,8 +105,13 @@ public class BarService {
     // Validate bar belongs to user — call this on EVERY request
     public void validateUserBarAccess(User user, Long barId) {
         if (user.isAdmin()) return;
-        boolean hasAccess = user.getBars().stream()
-            .anyMatch(b -> b.getBarId().equals(barId));
-        if (!hasAccess) throw new AccessDeniedException("No access to this bar");
+
+        boolean hasAccess = user.getBarAccesses().stream()
+            .anyMatch(a -> a.isActive() &&
+                           a.getBar().getBarId().equals(barId));
+
+        if (!hasAccess) {
+            throw new AccessDeniedException("No access to this bar");
+        }
     }
 }

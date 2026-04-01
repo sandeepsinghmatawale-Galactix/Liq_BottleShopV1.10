@@ -40,5 +40,9 @@ public interface InventorySessionRepository extends JpaRepository<InventorySessi
 			+ "AND s.status IN (com.barinventory.admin.enums.SessionStatus.COMPLETED, "
 			+ "com.barinventory.admin.enums.SessionStatus.SETUP) " + "ORDER BY s.sessionEndTime DESC")
 	List<InventorySession> findCompletedSessionsByBar(@Param("barId") Long barId);
+	
+//	Optional<InventorySession> findTopByBar_BarIdOrderBySessionDateDesc(Long barId);
+	
+	Optional<InventorySession> findTopByBar_BarIdOrderBySessionStartTimeDesc(Long barId);
 
 }

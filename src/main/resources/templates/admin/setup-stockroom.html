@@ -8,34 +8,17 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
         .table-input { width: 110px; text-align: right; }
-        .grand-total { background-color: #d4edda; font-weight: bold; }
-        #searchWrapper { position: relative; }
-        #searchResults {
-            display: none; position: absolute; top: calc(100% + 2px);
-            left: 0; right: 0; z-index: 1055; max-height: 300px; overflow-y: auto;
-            background: #fff; border: 1px solid #c8d0da;
-            border-radius: 0 0 6px 6px; box-shadow: 0 6px 18px rgba(0,0,0,.13);
-        }
-        .brand-header {
-            padding: 5px 14px 3px; font-size: .75rem; font-weight: 700;
-            letter-spacing: .05em; text-transform: uppercase;
-            color: #0d6efd; background: #f7f9ff; border-bottom: 1px solid #eef0f5;
-        }
-        .size-option {
-            display: flex; align-items: center; gap: 10px;
-            padding: 6px 14px 6px 22px; font-size: .87rem;
-            cursor: pointer; border-bottom: 1px solid #f5f5f5;
-        }
-        .size-option:hover { background: #e9f0ff; }
-        .size-option.is-added { background: #f0faf0; color: #aaa; cursor: default; }
-        .size-mrp { margin-left: auto; color: #198754; font-weight: 600; font-size: .82rem; }
+        .grand-total { background-color: #d4edda; font-weight: bold; font-size: 1.05rem; }
     </style>
 </head>
 <body>
 
 <nav class="navbar navbar-dark bg-primary">
     <div class="container-fluid">
-        <span class="navbar-brand"><i class="bi bi-boxes"></i> Admin Setup — Stockroom Opening Stock</span>
+        <span class="navbar-brand">
+            <i class="bi bi-boxes"></i>
+            Admin Setup — Stockroom Opening Stock
+        </span>
         <span class="text-white small">
             Bar: <strong th:text="${session.bar != null ? session.bar.barName : 'N/A'}"></strong>
             &nbsp;|&nbsp; Session #<span th:text="${sessionId}"></span>
@@ -44,284 +27,109 @@
 </nav>
 
 <div class="container mt-4">
-    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+    <div th:if="${error}" class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle"></i>
+        <span th:text="${error}"></span>
+    </div>
 
     <div class="alert alert-info">
         <i class="bi bi-info-circle"></i>
-        Search a brand → click a size to add a row →
-        <strong>type the bottle count</strong> in the Opening Stock column.
-        This becomes the bar owner's opening balance from Day 1.
+        <strong>Admin Setup:</strong> Enter the current physical stock for each product in the stockroom.
+        Leave as <strong>0</strong> for products not currently stocked.
+        This becomes the opening balance for the bar owner's first session.
     </div>
 
     <div class="card shadow">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-1-circle"></i> Step 4a: Stockroom Opening Stock</h5>
-            <span class="badge bg-white text-primary" id="itemBadge">0 items</span>
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-1-circle"></i> Step 4a: Stockroom Opening Stock
+            </h5>
         </div>
         <div class="card-body">
 
-            <!-- Search -->
-            <div class="row g-2 mb-3">
-                <div class="col-md-6">
-                    <label class="form-label small fw-semibold">Search Brand</label>
-                    <div id="searchWrapper">
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
-                            <input type="text" id="brandSearch" class="form-control"
-                                   placeholder="e.g. Jack Daniel's, Kingfisher…" autocomplete="off"/>
-                        </div>
-                        <div id="searchResults"></div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold">Category</label>
-                    <select id="catFilter" class="form-select">
-                        <option value="">All Categories</option>
-                        <option>WHISKY</option><option>RUM</option><option>VODKA</option>
-                        <option>GIN</option><option>BRANDY</option><option>BEER</option>
-                        <option>WINE</option><option>TEQUILA</option><option>OTHER</option>
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="button" class="btn btn-outline-secondary w-100" onclick="clearSearch()">
-                        <i class="bi bi-x-lg"></i> Clear
-                    </button>
-                </div>
-            </div>
+            <form th:action="@{/admin/setup/{id}/stockroom(id=${sessionId})}" method="post">
 
-            <!--
-                Form POSTs:
-                  brandSizeId[]           — one hidden per added row (for tracking)
-                  opening_{productId}     — qty keyed by productId, matches service exactly
-            -->
-            <form th:action="@{/admin/setup/{id}/stockroom(id=${sessionId})}" method="post" id="stockForm">
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                <div id="hiddenInputs"></div>
 
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover align-middle">
                         <thead class="table-dark">
                             <tr>
-                                <th>Brand</th>
+                                <th>Product</th>
                                 <th>Category</th>
-                                <th>Size</th>
-                                <th>Volume</th>
-                                <th class="text-end">MRP (₹)</th>
-                                <th class="text-center" style="background:#1a5cbf; min-width:160px;">
-                                    Opening Stock (Bottles)
-                                    <small class="d-block fw-normal opacity-75">← Admin enters qty here</small>
-                                </th>
-                                <th class="text-center">Remove</th>
+                                <th>Brand</th>
+                                <th class="text-center">Opening Stock (Bottles)</th>
                             </tr>
                         </thead>
-                        <tbody id="tableBody">
-                            <tr id="emptyRow">
-                                <td colspan="7" class="text-center text-muted py-4">
-                                    <i class="bi bi-search me-1"></i>
-                                    Search and add brands above to set opening stock.
+                        <tbody>
+                            <tr th:each="product : ${products}">
+                                <td>
+                                    <strong th:text="${product.productName}"></strong>
+                                    <small class="d-block text-muted"
+                                           th:if="${product.volumeML != null}"
+                                           th:text="${product.volumeML} + ' ml'"></small>
+                                </td>
+                                <td th:text="${product.category}"></td>
+                                <td class="text-muted" th:text="${product.brand}"></td>
+                                <td class="text-center">
+                                    <input type="number"
+                                           class="form-control table-input opening-input mx-auto"
+                                           step="0.01" min="0"
+                                           th:name="'opening_' + ${product.productId}"
+                                           th:value="${existingStock != null and existingStock[product.productId] != null ? existingStock[product.productId] : 0}"/>
+                                </td>
+                            </tr>
+                            <tr th:if="${products == null or #lists.isEmpty(products)}">
+                                <td colspan="4" class="text-center text-muted">
+                                    No products found. Please add products first.
                                 </td>
                             </tr>
                         </tbody>
                         <tfoot class="grand-total">
                             <tr>
-                                <td colspan="5" class="text-end">TOTAL:</td>
-                                <td class="text-center" id="grandTotal">0</td>
-                                <td></td>
+                                <td colspan="3" class="text-end">TOTAL:</td>
+                                <td class="text-center"><span id="totalOpening">0.00</span></td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
 
-                <div class="d-flex justify-content-between mt-3">
-                    <a th:href="@{/admin/bars/{id}/setup(id=${session.bar != null ? session.bar.barId : 0})}"
+                <div class="d-flex justify-content-between mt-4">
+                    <a th:if="${session.bar != null}"
+                       th:href="@{/admin/bars/{id}/setup(id=${session.bar.barId})}"
                        class="btn btn-secondary">
                         <i class="bi bi-arrow-left"></i> Back to Setup
+                    </a>
+                    <a th:if="${session.bar == null}"
+                       th:href="@{/dashboard}"
+                       class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Dashboard
                     </a>
                     <button type="submit" class="btn btn-success btn-lg">
                         Save &amp; Continue to Wells →
                     </button>
                 </div>
+
             </form>
         </div>
     </div>
 </div>
 
-<script th:inline="javascript">
-/*<![CDATA[*/
-
-// existingStockJson — Map<productId, qty> serialized by controller.
-// Controller must use: model.addAttribute("existingStockJson", sessionService.getSetupStockroomData(sessionId))
-// getSetupStockroomData returns Map<Long productId, BigDecimal qty>
-// Shape: { "5": 10, "8": 3 }  — keyed by productId
-const existingStock = /*[[${existingStockJson}]]*/ {};
-
-const addedMap  = new Map();   // key = brandSizeId (String), value = { pid, qty }
-const searchEl  = document.getElementById('brandSearch');
-const resultsEl = document.getElementById('searchResults');
-const catEl     = document.getElementById('catFilter');
-const tbody     = document.getElementById('tableBody');
-const hiddenDiv = document.getElementById('hiddenInputs');
-const totalEl   = document.getElementById('grandTotal');
-const badgeEl   = document.getElementById('itemBadge');
-const emptyRow  = document.getElementById('emptyRow');
-let timer = null;
-
-searchEl.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(doSearch, 250); });
-catEl.addEventListener('change', doSearch);
-searchEl.addEventListener('focus', () => { if (resultsEl.innerHTML.trim()) resultsEl.style.display = 'block'; });
-document.addEventListener('click', e => {
-    if (!e.target.closest('#searchWrapper') && !e.target.closest('#catFilter'))
-        resultsEl.style.display = 'none';
-});
-
-async function doSearch() {
-    const q = searchEl.value.trim(), cat = catEl.value;
-    if (!q && !cat) { resultsEl.style.display = 'none'; return; }
-    try {
-        const res = await fetch(
-            `/admin/brands/search?q=${encodeURIComponent(q)}&category=${encodeURIComponent(cat)}`,
-            { credentials: 'same-origin' }
-        );
-        renderDropdown(await res.json());
-    } catch {
-        resultsEl.innerHTML = '<div class="p-3 text-danger small"><i class="bi bi-exclamation-circle"></i> Search failed. Try again.</div>';
-        resultsEl.style.display = 'block';
-    }
-}
-
-function clearSearch() {
-    searchEl.value = ''; catEl.value = ''; resultsEl.style.display = 'none'; searchEl.focus();
-}
-
-function renderDropdown(brands) {
-    if (!brands.length) {
-        resultsEl.innerHTML = '<div class="p-3 text-muted small">No brands found.</div>';
-        resultsEl.style.display = 'block'; return;
-    }
-    let html = '';
-    brands.forEach(b => {
-        html += `<div>
-            <div class="brand-header">${esc(b.brandName)}
-                ${b.parentCompany ? `<span class="fw-normal text-muted ms-1">(${esc(b.parentCompany)})</span>` : ''}
-                <span class="badge bg-primary ms-2" style="font-size:.65rem">${esc(b.category)}</span>
-            </div>`;
-        (b.sizes || []).forEach(s => {
-            const k = String(s.brandSizeId), isAdded = addedMap.has(k);
-            // Pass s.productId as second argument — required to build correct field name
-            html += `<div class="size-option ${isAdded ? 'is-added' : ''}"
-                onclick="${isAdded ? '' : `addRow(${s.brandSizeId},${s.productId||0},'${ea(b.brandName)}','${ea(b.category)}','${ea(b.subCategory)}','${ea(s.sizeLabel)}',${s.volumeMl||0},${s.mrp||0})`}">
-                ${isAdded
-                    ? `<i class="bi bi-check-circle-fill text-success"></i><span class="small">Added</span>`
-                    : `<i class="bi bi-plus-circle text-primary"></i>`}
-                <strong>${esc(s.sizeLabel)}</strong>
-                ${s.volumeMl ? `<span class="text-muted small">${s.volumeMl} ml</span>` : ''}
-                ${s.packaging ? `<span class="badge bg-light text-dark border">${esc(s.packaging)}</span>` : ''}
-                <span class="size-mrp">₹${s.mrp ? Number(s.mrp).toFixed(2) : '—'}</span>
-            </div>`;
+<script>
+    function recalcTotal() {
+        let total = 0;
+        document.querySelectorAll(".opening-input").forEach(input => {
+            total += parseFloat(input.value) || 0;
         });
-        html += '</div>';
-    });
-    resultsEl.innerHTML = html;
-    resultsEl.style.display = 'block';
-}
-
-// brandSizeId  — unique key for dedup / element ids (brands module id)
-// productId    — drives the form field name (admin module id, matches service)
-function addRow(brandSizeId, productId, brandName, category, subCategory, sizeLabel, volumeMl, mrp) {
-    const k   = String(brandSizeId);
-    const pid = String(productId);      // field name: opening_{pid} — must match service key
-    if (addedMap.has(k)) return;
-    addedMap.set(k, { pid, qty: 0 });
-    emptyRow.style.display = 'none';
-
-    const tr = document.createElement('tr');
-    tr.id = 'tr_' + k;
-    tr.innerHTML = `
-        <td><strong>${esc(brandName)}</strong>
-            ${subCategory ? `<small class="d-block text-muted">${esc(subCategory)}</small>` : ''}
-        </td>
-        <td>${esc(category)}</td>
-        <td class="fw-semibold">${esc(sizeLabel)}</td>
-        <td class="text-muted">${volumeMl ? volumeMl + ' ml' : '—'}</td>
-        <td class="text-end">₹${mrp ? Number(mrp).toFixed(2) : '—'}</td>
-        <td class="text-center">
-            <input type="number"
-                   id="vis_${k}"
-                   class="form-control table-input mx-auto"
-                   step="1" min="0" value="0" placeholder="0"
-                   oninput="onQty('${k}', this.value)"/>
-        </td>
-        <td class="text-center">
-            <button type="button" class="btn btn-sm btn-outline-danger"
-                    onclick="removeRow('${k}')">
-                <i class="bi bi-trash"></i>
-            </button>
-        </td>`;
-    tbody.appendChild(tr);
-
-    // hidden brandSizeId — for tracking which rows were added
-    // hidden opening_{productId} — this is what saveSetupStockroom reads:
-    //   String key = "opening_" + product.getProductId();
-    hiddenDiv.insertAdjacentHTML('beforeend',
-        `<input type="hidden" name="brandSizeId" value="${k}" id="hid_id_${k}"/>
-         <input type="hidden" name="opening_${pid}" value="0" id="hid_qty_${k}"/>`);
-
-    // Pre-fill from existingStock (keyed by productId)
-    const saved = existingStock[pid] !== undefined ? existingStock[pid] : null;
-    if (saved !== null && saved > 0) {
-        document.getElementById('vis_' + k).value = saved;
-        onQty(k, saved);
-    } else {
-        setTimeout(() => document.getElementById('vis_' + k).focus(), 50);
+        document.getElementById("totalOpening").textContent = total.toFixed(2);
     }
-
-    recalc(); updateBadge(); doSearch();
-}
-
-function onQty(k, v) {
-    const item = addedMap.get(k);
-    if (item) item.qty = parseFloat(v) || 0;
-    const hid = document.getElementById('hid_qty_' + k);
-    if (hid) hid.value = v;
-    recalc();
-}
-
-function removeRow(k) {
-    addedMap.delete(k);
-    ['tr_', 'hid_id_', 'hid_qty_'].forEach(p => {
-        const el = document.getElementById(p + k); if (el) el.remove();
+    document.querySelectorAll(".opening-input").forEach(input => {
+        input.addEventListener("input", recalcTotal);
     });
-    if (!addedMap.size) emptyRow.style.display = '';
-    recalc(); updateBadge(); doSearch();
-}
-
-function recalc() {
-    let t = 0;
-    addedMap.forEach(i => t += i.qty);
-    totalEl.textContent = t;
-}
-
-function updateBadge() {
-    const n = addedMap.size;
-    badgeEl.textContent = n + (n === 1 ? ' item' : ' items');
-}
-
-// Sync visible inputs → hidden fields before POST
-document.getElementById('stockForm').addEventListener('submit', () => {
-    addedMap.forEach((_, k) => {
-        const vis = document.getElementById('vis_' + k);
-        const hid = document.getElementById('hid_qty_' + k);
-        if (vis && hid) hid.value = vis.value;
-    });
-});
-
-function esc(s) {
-    if (!s) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function ea(s) { return s ? String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'") : ''; }
-/*]]>*/
+    recalcTotal();
 </script>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

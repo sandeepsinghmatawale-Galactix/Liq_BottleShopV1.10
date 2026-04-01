@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.barinventory.admin.config.WellConfig;
 import com.barinventory.admin.entity.Bar;
 import com.barinventory.admin.entity.BarProductPrice;
 import com.barinventory.admin.entity.BarWell;
@@ -31,6 +30,7 @@ import com.barinventory.admin.repository.InventorySessionRepository;
 import com.barinventory.admin.repository.SalesRecordRepository;
 import com.barinventory.admin.repository.StockroomInventoryRepository;
 import com.barinventory.admin.repository.WellInventoryRepository;
+import com.barinventory.brands.entity.BrandSize;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -232,12 +232,17 @@ public class InventorySessionService {
     }
     
     private void validatePricesExist(Long sessionId, InventorySession session) {
-        List<WellInventory> wells = wellRepository.findBySessionSessionId(sessionId);
+        // Get all wells in the session
+        List<WellInventory> wells = wellRepository.findBySessionId(sessionId);
+
         for (WellInventory w : wells) {
-            priceRepository.findByBarBarIdAndProductProductId(
-                session.getBar().getBarId(), w.getProduct().getProductId())
-                .orElseThrow(() -> new RuntimeException(
-                    "No price configured for: " + w.getProduct().getProductName()));
+            // Check price using BrandSize instead of Product
+            priceRepository.findByBarBarIdAndBrandSizeId(
+                session.getBar().getBarId(), w.getBrandSize().getId()
+            ).orElseThrow(() -> new RuntimeException(
+                "No price configured for: " + w.getBrandSize().getBrand().getBrandName()
+                + " - " + w.getBrandSize().getSizeLabel()
+            ));
         }
     }
     
@@ -323,41 +328,48 @@ public class InventorySessionService {
 
         List<WellInventory> wellInventories = wellRepository.findBySessionSessionId(sessionId);
 
-        Map<Long, BigDecimal> consumed = wellInventories.stream()
+        // Group consumed quantity by BrandSize
+        Map<Long, BigDecimal> consumedByBrandSize = wellInventories.stream()
             .collect(Collectors.groupingBy(
-                w -> w.getProduct().getProductId(),
+                w -> w.getBrandSize().getId(),
                 Collectors.reducing(BigDecimal.ZERO, WellInventory::getConsumed, BigDecimal::add)
             ));
 
-        for (Map.Entry<Long, BigDecimal> entry : consumed.entrySet()) {
-            Long productId = entry.getKey();
+        for (Map.Entry<Long, BigDecimal> entry : consumedByBrandSize.entrySet()) {
+            Long brandSizeId = entry.getKey();
             BigDecimal totalConsumed = entry.getValue();
             if (totalConsumed.compareTo(BigDecimal.ZERO) <= 0) continue;
 
-            Product product = wellInventories.stream()
-                .filter(w -> w.getProduct().getProductId().equals(productId))
-                .findFirst().get().getProduct();
+            BrandSize brandSize = wellInventories.stream()
+                .filter(w -> w.getBrandSize().getId().equals(brandSizeId))
+                .findFirst()
+                .get()
+                .getBrandSize();
 
+            // Find price by bar and brandSize
             BarProductPrice price = priceRepository
-                .findByBarBarIdAndProductProductId(session.getBar().getBarId(), productId)
+                .findByBarBarIdAndBrandSizeId(session.getBar().getBarId(), brandSizeId)
                 .orElseThrow(() -> new RuntimeException(
-                    "Price not set for product: " + product.getProductName() +
-                    " at bar: " + session.getBar().getBarName()));
+                    "Price not set for brand: " + brandSize.getBrand().getBrandName() +
+                    ", size: " + brandSize.getSizeLabel() +
+                    " at bar: " + session.getBar().getBarName()
+                ));
 
             SalesRecord sales = SalesRecord.builder()
                 .session(session)
-                .product(product)
+                .brandSize(brandSize)
                 .quantitySold(totalConsumed)
                 .sellingPricePerUnit(price.getSellingPrice())
                 .costPricePerUnit(price.getCostPrice() != null ? price.getCostPrice() : BigDecimal.ZERO)
                 .build();
 
             salesRepository.save(sales);
-            log.info("Saved sales record: product={}, qty={}", product.getProductName(), totalConsumed);
+            log.info("Saved sales record: brand={}, size={}, qty={}",
+                     brandSize.getBrand().getBrandName(),
+                     brandSize.getSizeLabel(),
+                     totalConsumed);
         }
     }
-    
-    
  // In BarService or a new WellService
     public List<String> getWellNamesForBar(Long barId) {
         List<BarWell> wells = barWellRepository.findByBarBarIdAndActiveTrue(barId);
@@ -433,7 +445,7 @@ public class InventorySessionService {
                 .filter(w -> w.getReceivedFromDistribution()
                               .compareTo(BigDecimal.ZERO) > 0)
                 .collect(Collectors.toMap(
-                        w -> w.getProduct().getProductId() + "_" + w.getWellName(),
+                        w -> w.getBrandSize().getId() + "_" + w.getWellName(), // use BrandSize ID
                         WellInventory::getReceivedFromDistribution,
                         BigDecimal::add  // sum if duplicate key
                 ));
@@ -444,24 +456,24 @@ public class InventorySessionService {
     public void saveWellInventoryFromForm(Long sessionId, Map<String, String> formData) {
 
         InventorySession session = getSessionInProgress(sessionId);
-        List<Product> products = productService.getAllActiveProducts();
+        List<BrandSize> brandSizes = brandService.getAllActiveBrandSizes(); // get all active sizes
 
         // Get existing well records saved during distribution
-        List<WellInventory> existingWells =
-                wellRepository.findBySessionSessionId(sessionId);
+        List<WellInventory> existingWells = wellRepository.findBySessionSessionId(sessionId);
 
-        // Build lookup map of existing wells: "productId_wellName" → WellInventory
+        // Build lookup map of existing wells: "brandSizeId_wellName" → WellInventory
         Map<String, WellInventory> existingMap = existingWells.stream()
                 .collect(Collectors.toMap(
-                        w -> w.getProduct().getProductId() + "_" + w.getWellName(),
+                        w -> w.getBrandSize().getId() + "_" + w.getWellName(),
                         w -> w
                 ));
 
         Long barId = session.getBar().getBarId();
         List<String> wellNames = getWellNamesForBar(barId);
+
         for (String wellName : wellNames) {
-            for (Product product : products) {
-                String key      = product.getProductId() + "_" + wellName;
+            for (BrandSize brandSize : brandSizes) {
+                String key      = brandSize.getId() + "_" + wellName;
                 String formKey  = "opening_" + key;
                 String closeKey = "closing_" + key;
 
@@ -478,7 +490,7 @@ public class InventorySessionService {
                 WellInventory wi = existingMap.get(key);
 
                 if (wi != null) {
-                    // ✅ Existing record (received from distribution) — update opening/closing
+                    // ✅ Existing record — update opening/closing
                     BigDecimal received = wi.getReceivedFromDistribution();
                     BigDecimal consumed = opening.add(received).subtract(closing);
 
@@ -488,9 +500,9 @@ public class InventorySessionService {
                             ? consumed : BigDecimal.ZERO);
                     wellRepository.save(wi);
 
-                    log.debug("Updated existing well: product={}, well={}, " +
-                            "opening={}, received={}, closing={}, consumed={}",
-                            product.getProductName(), wellName,
+                    log.debug("Updated existing well: brandSize={}, well={}, " +
+                                    "opening={}, received={}, closing={}, consumed={}",
+                            brandSize.getSizeLabel(), wellName,
                             opening, received, closing, wi.getConsumed());
 
                 } else if (opening.compareTo(BigDecimal.ZERO) > 0
@@ -500,7 +512,7 @@ public class InventorySessionService {
 
                     WellInventory newWi = WellInventory.builder()
                             .session(session)
-                            .product(product)
+                            .brandSize(brandSize)
                             .wellName(wellName)
                             .openingStock(opening)
                             .receivedFromDistribution(BigDecimal.ZERO) // no distribution
@@ -510,9 +522,9 @@ public class InventorySessionService {
                             .build();
                     wellRepository.save(newWi);
 
-                    log.debug("Created zero-received well: product={}, well={}, " +
-                            "opening={}, received=0, closing={}, consumed={}",
-                            product.getProductName(), wellName,
+                    log.debug("Created zero-received well: brandSize={}, well={}, " +
+                                    "opening={}, received=0, closing={}, consumed={}",
+                            brandSize.getSizeLabel(), wellName,
                             opening, closing, newWi.getConsumed());
                 }
             }
@@ -520,7 +532,6 @@ public class InventorySessionService {
 
         log.info("saveWellInventoryFromForm complete for session {}", sessionId);
     }
-    
     @Transactional
     public void saveWellInventory(Long sessionId, List<WellInventory> wellInventories) {
         InventorySession session = getSessionInProgress(sessionId);
@@ -531,62 +542,55 @@ public class InventorySessionService {
 
             // Only update allocation if received > 0
             if (wellInventory.getReceivedFromDistribution().compareTo(BigDecimal.ZERO) > 0) {
-                updateDistributionAllocation(sessionId,
-                        wellInventory.getProduct().getProductId(),
-                        wellInventory.getReceivedFromDistribution());
+                updateDistributionAllocation(
+                    sessionId,
+                    wellInventory.getBrandSize().getId(),
+                    wellInventory.getReceivedFromDistribution()
+                );
             }
         }
 
         log.info("Saved {} well inventory records for session {}", wellInventories.size(), sessionId);
     }
 
-    private BigDecimal parseDecimal(String val) {
-        return (val != null && !val.isEmpty()) ? new BigDecimal(val) : BigDecimal.ZERO;
-    }
-    
     @Transactional
     public void saveDistributionAllocations(Long sessionId, Map<String, String> formData) {
         InventorySession session = getSessionInProgress(sessionId);
-        List<Product> products = productService.getAllActiveProducts();
+        List<BrandSize> brandSizes = brandService.getAllActiveBrandSizes();
 
-        // ✅ Clear existing well records
+        // Clear existing well records
         wellRepository.deleteBySessionSessionId(sessionId);
 
-        // ✅ Reset all distribution totalAllocated to zero before recalculating
-        List<DistributionRecord> distributions =
-                distributionRepository.findBySessionSessionId(sessionId);
+        // Reset distribution totals
+        List<DistributionRecord> distributions = distributionRepository.findBySessionSessionId(sessionId);
         for (DistributionRecord dr : distributions) {
             dr.setTotalAllocated(BigDecimal.ZERO);
-            dr.setUnallocated(dr.getQuantityFromStockroom()); // reset unallocated too
+            dr.setUnallocated(dr.getQuantityFromStockroom());
             dr.setStatus(DistributionStatus.PENDING_ALLOCATION);
             distributionRepository.save(dr);
         }
 
         List<WellInventory> wellInventories = new ArrayList<>();
+        for (BrandSize brandSize : brandSizes) {
+            for (String wellName : getWellNamesForBar(session.getBar().getBarId())) {
 
-        for (Product product : products) {
-        	for (String wellName : getWellNamesForBar(session.getBar().getBarId())) {
-
-                String key = "alloc_" + product.getProductId() + "_" + wellName;
+                String key = "alloc_" + brandSize.getId() + "_" + wellName;
                 BigDecimal allocated = parseDecimal(formData.get(key));
 
                 if (allocated.compareTo(BigDecimal.ZERO) > 0) {
-
-                    // ✅ Check distribution record exists for this product
                     Optional<DistributionRecord> distOpt = distributionRepository
-                            .findBySessionSessionIdAndProductProductId(
-                                    sessionId, product.getProductId());
+                            .findBySessionSessionIdAndBrandSizeId(sessionId, brandSize.getId());
 
-                    if (distOpt.isEmpty()) continue; // skip products not in distribution
+                    if (distOpt.isEmpty()) continue;
 
                     WellInventory wi = WellInventory.builder()
                             .session(session)
-                            .product(product)
+                            .brandSize(brandSize)
                             .wellName(wellName)
                             .openingStock(BigDecimal.ZERO)
                             .receivedFromDistribution(allocated)
                             .closingStock(BigDecimal.ZERO)
-                            .consumed(BigDecimal.ZERO) // updated later on wells page
+                            .consumed(BigDecimal.ZERO)
                             .build();
 
                     wellInventories.add(wi);
@@ -594,19 +598,22 @@ public class InventorySessionService {
             }
         }
 
-        // ✅ Save wells and update distribution allocation totals
+        // Save wells and update distribution allocations
         for (WellInventory wi : wellInventories) {
             wi.setSession(session);
             wellRepository.save(wi);
-            updateDistributionAllocation(sessionId,
-                    wi.getProduct().getProductId(),
-                    wi.getReceivedFromDistribution());
+            updateDistributionAllocation(
+                sessionId,
+                wi.getBrandSize().getId(),
+                wi.getReceivedFromDistribution()
+            );
         }
 
-        // ✅ Update unallocated field and status on each distribution record
+        // Update unallocated totals and status
         for (DistributionRecord dr : distributionRepository.findBySessionSessionId(sessionId)) {
-            BigDecimal totalReceived = wellRepository.sumReceivedBySessionAndProduct(
-                    sessionId, dr.getProduct().getProductId());
+            BigDecimal totalReceived = wellRepository.sumReceivedBySessionAndBrandSize(
+                    sessionId, dr.getBrandSize().getId()
+            );
             dr.setTotalAllocated(totalReceived);
             dr.setUnallocated(dr.getQuantityFromStockroom().subtract(totalReceived));
             dr.setStatus(dr.getUnallocated().compareTo(BigDecimal.ZERO) == 0
@@ -618,63 +625,164 @@ public class InventorySessionService {
         log.info("Saved distribution allocations for session {}, {} well records",
                 sessionId, wellInventories.size());
     }
-    
-    
-    
+
     /**
-     * Returns productId → previousClosingStock for stockroom opening pre-fill
+     * Returns brandSizeId → previousClosingStock for stockroom opening pre-fill
      */
     public Map<Long, BigDecimal> getPreviousClosingForStockroom(Long barId) {
-        List<InventorySession> completed =
-                sessionRepository.findCompletedSessionsByBar(barId);
-
-        if (completed.isEmpty()) {
-            log.info("No previous completed session found for bar {}", barId);
-            return Map.of(); // first ever session - all zeros
-        }
+        List<InventorySession> completed = sessionRepository.findCompletedSessionsByBar(barId);
+        if (completed.isEmpty()) return Map.of();
 
         Long lastSessionId = completed.get(0).getSessionId();
-        log.info("Pre-filling stockroom opening from session {} for bar {}",
-                lastSessionId, barId);
-
-        List<StockroomInventory> stockrooms =
-                stockroomRepository.findBySessionSessionId(lastSessionId);
+        List<StockroomInventory> stockrooms = stockroomRepository.findBySessionSessionId(lastSessionId);
 
         return stockrooms.stream()
                 .collect(Collectors.toMap(
-                        s -> s.getProduct().getProductId(),
+                        s -> s.getBrandSize().getId(),
                         StockroomInventory::getClosingStock,
-                        (a, b) -> a // keep first if duplicate
+                        (a, b) -> a
                 ));
     }
 
-    /**
-     * Returns "productId_wellName" → previousClosingStock for wells opening pre-fill
-     */
-    public Map<String, BigDecimal> getPreviousClosingForWells(Long barId) {
-        List<InventorySession> completed =
-                sessionRepository.findCompletedSessionsByBar(barId);
+ // ✅ ADD THIS METHOD - missing in your service
+    public List<StockroomInventory> getSetupStockroomData(Long sessionId) {
+        return stockroomRepository.findBySessionSessionId(sessionId);
+    }
 
-        if (completed.isEmpty()) {
-            log.info("No previous completed session found for bar {}", barId);
-            return Map.of(); // first ever session - all zeros
+    // ✅ ADD THIS METHOD - missing in your service  
+    public List<WellInventory> getSetupWellsData(Long sessionId) {
+        return wellRepository.findBySessionSessionId(sessionId);
+    }
+
+    // ✅ ADD THIS METHOD - missing in your service
+    public List<String> getWellNamesForBar(Long barId) {
+        List<BarWell> wells = barWellRepository.findByBarBarIdAndActiveTrue(barId);
+        if (wells == null || wells.isEmpty()) {
+            return List.of("BAR_1", "BAR_2", "SERVICE_BAR");
+        }
+        return wells.stream()
+                .map(BarWell::getWellName)
+                .collect(Collectors.toList());
+    }
+
+    // ✅ FIX THIS METHOD - change to use BrandSizeProductDTO
+    @Transactional
+    public void saveSetupStockroom(Long sessionId, Map<String, String> formData) {
+        InventorySession session = getSession(sessionId);
+        
+        if (session.getStatus() != SessionStatus.SETUP) {
+            throw new RuntimeException("Not a setup session");
         }
 
-        Long lastSessionId = completed.get(0).getSessionId();
-        log.info("Pre-filling wells opening from session {} for bar {}",
-                lastSessionId, barId);
+        stockroomRepository.deleteBySessionSessionId(sessionId);
+        
+        // ✅ Use DTO instead of Product
+        List<BrandSizeProductDTO> products = brandService.getAllActiveProducts();
 
-        List<WellInventory> wells =
-                wellRepository.findBySessionSessionId(lastSessionId);
+        for (BrandSizeProductDTO dto : products) {
+            String key = "stock_" + dto.getId();  // ✅ Match HTML form field
+            BigDecimal openingQty = parseDecimal(formData.get(key));
+
+            if (openingQty.compareTo(BigDecimal.ZERO) > 0) {
+                
+                // ✅ Fetch BrandSize entity
+                BrandSize brandSize = brandSizeRepository.findById(dto.getId())
+                    .orElseThrow(() -> new RuntimeException("BrandSize not found"));
+                
+                StockroomInventory si = StockroomInventory.builder()
+                    .session(session)
+                    .brandSize(brandSize)  // ✅ Use BrandSize
+                    .openingStock(openingQty)
+                    .receivedStock(BigDecimal.ZERO)
+                    .closingStock(openingQty)
+                    .transferredOut(BigDecimal.ZERO)
+                    .currentStock(openingQty)
+                    .createdAt(LocalDateTime.now())
+                    .lastUpdated(LocalDateTime.now())
+                    .build();
+                stockroomRepository.save(si);
+            }
+        }
+        log.info("Saved setup stockroom for session {}", sessionId);
+    }
+
+    // ✅ FIX THIS METHOD - change to use BrandSizeProductDTO
+    @Transactional
+    public void saveSetupWells(Long sessionId, Map<String, String> formData) {
+        InventorySession session = getSession(sessionId);
+
+        if (session.getStatus() != SessionStatus.SETUP) {
+            throw new RuntimeException("Not a setup session");
+        }
+
+        wellRepository.deleteBySessionSessionId(sessionId);
+        
+        // ✅ Use DTO
+        List<BrandSizeProductDTO> products = brandService.getAllActiveProducts();
+        List<String> wellNames = getWellNamesForBar(session.getBar().getBarId());
+
+        for (String wellName : wellNames) {
+            for (BrandSizeProductDTO dto : products) {
+                String key = "well_" + wellName + "_stock_" + dto.getId();
+                BigDecimal openingQty = parseDecimal(formData.get(key));
+
+                if (openingQty.compareTo(BigDecimal.ZERO) > 0) {
+                    
+                    // ✅ Fetch BrandSize entity
+                    BrandSize brandSize = brandSizeRepository.findById(dto.getId())
+                        .orElseThrow(() -> new RuntimeException("BrandSize not found"));
+                    
+                    WellInventory wi = WellInventory.builder()
+                        .session(session)
+                        .brandSize(brandSize)  // ✅ Use BrandSize
+                        .wellName(wellName)
+                        .openingStock(openingQty)
+                        .receivedFromDistribution(BigDecimal.ZERO)
+                        .closingStock(openingQty)
+                        .consumed(BigDecimal.ZERO)
+                        .currentStock(openingQty)
+                        .createdAt(LocalDateTime.now())
+                        .lastUpdated(LocalDateTime.now())
+                        .build();
+                    wellRepository.save(wi);
+                }
+            }
+        }
+        log.info("Saved setup wells for session {}", sessionId);
+    }
+
+    // ✅ ADD private helper if missing
+    private BigDecimal parseDecimal(String val) {
+        if (val == null || val.trim().isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        try {
+            return new BigDecimal(val.trim());
+        } catch (NumberFormatException e) {
+            return BigDecimal.ZERO;
+        }
+    }
+    /**
+     * Returns "brandSizeId_wellName" → previousClosingStock for wells opening pre-fill
+     */
+    public Map<String, BigDecimal> getPreviousClosingForWells(Long barId) {
+        List<InventorySession> completed = sessionRepository.findCompletedSessionsByBar(barId);
+        if (completed.isEmpty()) return Map.of();
+
+        Long lastSessionId = completed.get(0).getSessionId();
+        List<WellInventory> wells = wellRepository.findBySessionSessionId(lastSessionId);
 
         return wells.stream()
                 .collect(Collectors.toMap(
-                        w -> w.getProduct().getProductId() + "_" + w.getWellName(),
+                        w -> w.getBrandSize().getId() + "_" + w.getWellName(),
                         WellInventory::getClosingStock,
                         (a, b) -> a
                 ));
     }
-    
+
+    private BigDecimal parseDecimal(String val) {
+        return (val != null && !val.isEmpty()) ? new BigDecimal(val) : BigDecimal.ZERO;
+    }
     /**
      * ADMIN: Create a SETUP session for initial stock seeding
      */
@@ -747,34 +855,34 @@ public class InventorySessionService {
     /**
      * ADMIN: Save initial wells opening stock
      */
-    
     @Transactional
     public void saveSetupWells(Long sessionId, Map<String, String> formData) {
         InventorySession session = sessionRepository.findByIdWithBar(sessionId)
             .orElseThrow(() -> new RuntimeException("Session not found"));
 
-        if (session.getStatus() != SessionStatus.SETUP)
+        if (session.getStatus() != SessionStatus.SETUP) {
             throw new RuntimeException("Not a setup session");
+        }
 
         wellRepository.deleteBySessionSessionId(sessionId);
         List<Product> products = productService.getAllActiveProducts();
+
+        // ✅ Use bar's configured wells
         List<String> wellNames = getWellNamesForBar(session.getBar().getBarId());
 
         for (String wellName : wellNames) {
             for (Product product : products) {
-                // FIX: matches form field name = opening_{productId}_{Well-Name-hyphenated}
-                String key = "opening_" + product.getProductId()
-                           + "_" + wellName.replace(" ", "-");
-                BigDecimal qty = parseDecimal(formData.get(key));
+                String key = "opening_" + product.getProductId() + "_" + wellName;
+                BigDecimal openingQty = parseDecimal(formData.get(key));
 
-                if (qty.compareTo(BigDecimal.ZERO) > 0) {
+                if (openingQty.compareTo(BigDecimal.ZERO) > 0) {
                     WellInventory wi = WellInventory.builder()
                         .session(session)
                         .product(product)
-                        .wellName(wellName)          // store with spaces — DB consistent
-                        .openingStock(qty)
+                        .wellName(wellName)
+                        .openingStock(openingQty)
                         .receivedFromDistribution(BigDecimal.ZERO)
-                        .closingStock(qty)
+                        .closingStock(openingQty)
                         .consumed(BigDecimal.ZERO)
                         .remarks("Admin initial setup")
                         .build();
@@ -782,7 +890,6 @@ public class InventorySessionService {
                 }
             }
         }
-        log.info("Saved setup wells for session {}", sessionId);
     }
 
     /**
@@ -821,26 +928,10 @@ public class InventorySessionService {
             ));
     }
 
-    
-  
-    
-    public List<StockroomInventory> getSetupStockroomRows(Long sessionId) {
-        return stockroomRepository.findBySessionSessionId(sessionId).stream()
-            .filter(r -> r.getOpeningStock().compareTo(BigDecimal.ZERO) > 0)
-            .collect(Collectors.toList());
-    }
-
-    public List<WellInventory> getSetupWellsRows(Long sessionId) {
-        return wellRepository.findBySessionSessionId(sessionId).stream()
-            .filter(r -> r.getOpeningStock().compareTo(BigDecimal.ZERO) > 0)
-            .collect(Collectors.toList());
-    }
-
-    // Fix key format — spaces → hyphens
     public Map<String, BigDecimal> getSetupWellsData(Long sessionId) {
         return wellRepository.findBySessionSessionId(sessionId).stream()
             .collect(Collectors.toMap(
-                w -> w.getProduct().getProductId() + "_" + w.getWellName().replace(" ", "-"),
+                w -> w.getProduct().getProductId() + "_" + w.getWellName(),
                 WellInventory::getClosingStock
             ));
     }

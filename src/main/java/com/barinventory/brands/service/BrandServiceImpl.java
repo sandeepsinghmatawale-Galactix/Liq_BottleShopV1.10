@@ -2,6 +2,7 @@ package com.barinventory.brands.service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -98,14 +99,12 @@ public class BrandServiceImpl implements BrandService {
         return mapToDTO(brandRepository.save(brand));
     }
 
-    
     @Override
     @Transactional(readOnly = true)
     public List<BrandSizeProductDTO> getAllActiveProducts() {
 
         return brandRepository.findAllActiveWithActiveSizes()
                 .stream()
-
                 .flatMap(brand -> brand.getSizes().stream()
                         .filter(BrandSize::isActive)
                         .map(size -> new BrandSizeProductDTO(
@@ -120,7 +119,9 @@ public class BrandServiceImpl implements BrandService {
 
                                 brand.getBrandName(),
 
-                                BigDecimal.valueOf(size.getVolumeMl())   // FIX HERE
+                                size.getVolumeMl() != null
+                                        ? BigDecimal.valueOf(size.getVolumeMl())
+                                        : BigDecimal.ZERO
                         ))
                 )
                 .sorted((a, b) -> {
@@ -134,7 +135,6 @@ public class BrandServiceImpl implements BrandService {
                     return a.getVolumeML().compareTo(b.getVolumeML());
 
                 })
-
                 .toList();
     }
     // ── UPDATE WITH SIZES (form) ──────────────────────────────────────
@@ -301,4 +301,41 @@ public class BrandServiceImpl implements BrandService {
                         .toList())
                 .build();
     }
+       
+
+    
+    private BrandSizeDTO convertToDTO(BrandSize bs) {
+        return BrandSizeDTO.builder()
+                .id(bs.getId())
+                .brandName(bs.getBrand().getBrandName())   // ✅ NOW VALID
+                .sizeLabel(bs.getSizeLabel())
+                .volumeMl(bs.getVolumeMl())
+                .packaging(bs.getPackaging())
+                .purchasePrice(bs.getPurchasePrice())
+                .sellingPrice(bs.getSellingPrice())
+                .mrp(bs.getMrp())
+                .mrpRounding(bs.getMrpRounding())
+                .exciseCessPercent(bs.getExciseCessPercent())
+                .tcsPercent(bs.getTcsPercent())
+                .gstPercent(bs.getGstPercent())
+                .abvPercent(bs.getAbvPercent())
+                .barcode(bs.getBarcode())
+                .hsnCode(bs.getHsnCode())
+                .displayOrder(bs.getDisplayOrder())
+                .active(bs.isActive())
+                .bottlesPerCase(bs.getBottlesPerCase())
+                .casePrice(bs.getCasePrice())
+                .build();
+    }
+    
+    @Override
+    public List<BrandSizeDTO> getAllBrandSizes() {
+        return brandSizeRepository.findAll()
+                .stream()
+                .filter(BrandSize::isActive) // ✅ only active
+                .map(this::convertToDTO)
+                .toList();
+    }
+
+    
 }

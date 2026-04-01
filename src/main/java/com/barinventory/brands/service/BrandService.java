@@ -25,4 +25,7 @@ public interface BrandService {
 	    
 	 
 	    List<BrandSizeProductDTO> getAllActiveProducts();
+	    
+	    List<BrandSizeDTO> getAllBrandSizes();
+
 }

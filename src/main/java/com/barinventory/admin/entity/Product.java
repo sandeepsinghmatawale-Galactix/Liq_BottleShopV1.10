@@ -37,16 +37,16 @@ public class Product {
     private String productName;
     
     @Column(length = 50)
-    private String category; // Whisky, Vodka, Rum, Beer, Wine, etc.
+    private String category;
     
     @Column(length = 50)
     private String brand;
     
     @Column(precision = 10, scale = 2)
-    private BigDecimal volumeML; // Bottle size in ML
+    private BigDecimal volumeML;
     
     @Column(length = 20)
-    private String unit = "BOTTLE"; // BOTTLE, CASE
+    private String unit = "BOTTLE";
     
     @Column(nullable = false)
     private Boolean active = true;
@@ -55,11 +55,5 @@ public class Product {
     @JsonIgnore
     private List<BarProductPrice> barPrices;
 
-    
-  
-    
-    @OneToMany(mappedBy = "product")
-    @JsonIgnore  // ✅ Add this
-    private List<StockroomInventory> stockroomInventories;
-    
+     
 }

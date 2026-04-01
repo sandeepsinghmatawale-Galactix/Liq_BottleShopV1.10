@@ -4,7 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.util.List;
+
+import com.barinventory.brands.entity.BrandSize;
 
 @Entity
 @Table(name = "sales_records")
@@ -23,18 +24,19 @@ public class SalesRecord {
     @JoinColumn(name = "session_id", nullable = false)
     private InventorySession session;
     
+    
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
+    @JoinColumn(name = "brand_size_id", nullable = false)
+    private BrandSize brandSize; // Specific SKU/variant
     
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal quantitySold = BigDecimal.ZERO; // Sum of consumed from all wells
+    private BigDecimal quantitySold = BigDecimal.ZERO;
     
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal sellingPricePerUnit = BigDecimal.ZERO;
     
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal totalRevenue = BigDecimal.ZERO; // quantitySold × sellingPricePerUnit
+    private BigDecimal totalRevenue = BigDecimal.ZERO;
     
     @Column(precision = 10, scale = 2)
     private BigDecimal costPricePerUnit = BigDecimal.ZERO;
@@ -43,7 +45,7 @@ public class SalesRecord {
     private BigDecimal totalCost = BigDecimal.ZERO;
     
     @Column(precision = 10, scale = 2)
-    private BigDecimal profit = BigDecimal.ZERO; // totalRevenue - totalCost
+    private BigDecimal profit = BigDecimal.ZERO;
     
     @PrePersist
     @PreUpdate

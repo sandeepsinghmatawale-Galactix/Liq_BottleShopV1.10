@@ -1,9 +1,9 @@
 package com.barinventory.admin.entity;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 import com.barinventory.admin.enums.DistributionStatus;
+import com.barinventory.brands.entity.BrandSize;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Column;
@@ -21,7 +21,6 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -34,49 +33,51 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class DistributionRecord {
-    
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "session_id", nullable = false)
-    @JsonIgnore
-    private InventorySession session;
 
-    
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
-    
-    @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal quantityFromStockroom = BigDecimal.ZERO; // Must match stockroom transferred
-    
-    @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal totalAllocated = BigDecimal.ZERO; // Sum of all well allocations
-    
-    @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal unallocated = BigDecimal.ZERO; // quantityFromStockroom - totalAllocated
-    
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private DistributionStatus status = DistributionStatus.PENDING_ALLOCATION;
-    
-    @Column(length = 200)
-    private String notes;
-    
-    @PrePersist
-    @PreUpdate
-    public void calculateUnallocated() {
-        this.unallocated = this.quantityFromStockroom.subtract(this.totalAllocated);
-        
-        if (this.unallocated.compareTo(BigDecimal.ZERO) == 0 && 
-            this.totalAllocated.compareTo(BigDecimal.ZERO) > 0) {
-            this.status = DistributionStatus.ALLOCATED;
-        } else if (this.totalAllocated.compareTo(BigDecimal.ZERO) == 0) {
-            this.status = DistributionStatus.PENDING_ALLOCATION;
-        }
-    }
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+
+	// ── Inventory Session ─────────────────────────────────────
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "session_id", nullable = false)
+	@JsonIgnore
+	private InventorySession session;
+
+	@ManyToOne
+	@JoinColumn(name = "brand_size_id", nullable = false)
+	private BrandSize brandSize;
+
+	// ── Stock & Allocation ───────────────────────────────────
+	@Column(nullable = false, precision = 10, scale = 2)
+	private BigDecimal quantityFromStockroom = BigDecimal.ZERO; // Must match stockroom transferred
+
+	@Column(nullable = false, precision = 10, scale = 2)
+	private BigDecimal totalAllocated = BigDecimal.ZERO; // Sum of all well allocations
+
+	@Column(nullable = false, precision = 10, scale = 2)
+	private BigDecimal unallocated = BigDecimal.ZERO; // quantityFromStockroom - totalAllocated
+
+	// ── Status ──────────────────────────────────────────────
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
+	private DistributionStatus status = DistributionStatus.PENDING_ALLOCATION;
+
+	@Column(length = 200)
+	private String notes;
+
+	// ── Auto-calculate unallocated & status ─────────────────
+	@PrePersist
+	@PreUpdate
+	public void calculateUnallocated() {
+		this.unallocated = this.quantityFromStockroom.subtract(this.totalAllocated);
+
+		if (this.totalAllocated.compareTo(BigDecimal.ZERO) == 0) {
+			this.status = DistributionStatus.PENDING_ALLOCATION; // Nothing allocated
+		} else if (this.unallocated.compareTo(BigDecimal.ZERO) == 0) {
+			this.status = DistributionStatus.ALLOCATED; // Fully allocated
+		} else {
+			this.status = DistributionStatus.PENDING_ALLOCATION; // Partially allocated
+		}
+	}
 }
