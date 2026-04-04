@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Create Account - BarInventory</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
+
+        body.customer-theme {
+            min-height:100vh;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+
+        .register-container { width:100%; max-width:500px; padding:20px; }
+
+        .register-card {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(20px);
+            border-radius:20px;
+            padding:35px;
+            color:#fff;
+            box-shadow:0 10px 40px rgba(0,0,0,0.4);
+        }
+
+        h1 { text-align:center; margin-bottom:20px; }
+
+        .form-group { margin-bottom:15px; }
+        label { font-size:13px; color:#ccc; display:block; margin-bottom:5px; }
+
+        input, select {
+            width:100%;
+            padding:11px;
+            border-radius:10px;
+            border:none;
+            background: rgba(255,255,255,0.1);
+            color:#fff;
+        }
+
+        input:focus, select:focus {
+            outline:none;
+            box-shadow:0 0 0 2px #00c6ff;
+        }
+
+        .form-row {
+            display:flex;
+            gap:10px;
+        }
+
+        .form-row .form-group { flex:1; }
+
+        .btn-primary {
+            width:100%;
+            padding:12px;
+            border:none;
+            border-radius:12px;
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            color:#fff;
+            margin-top:10px;
+            cursor:pointer;
+        }
+
+        .btn-primary:hover {
+            transform:translateY(-2px);
+        }
+
+        .alert-danger {
+            background: rgba(255,0,0,0.2);
+            padding:10px;
+            border-radius:8px;
+            margin-bottom:15px;
+        }
+
+        .login-link {
+            text-align:center;
+            margin-top:15px;
+            font-size:13px;
+        }
+
+        a { color:#00c6ff; text-decoration:none; }
+    </style>
+</head>
+
+<body class="customer-theme">
+<div class="register-container">
+    <div class="register-card">
+
+        <h1>🍷 Create Account</h1>
+
+        <div th:if="${error}" class="alert-danger" th:text="${error}"></div>
+
+        <form th:action="@{/customer/register}" method="post" th:object="${registration}">
+
+            <div class="form-group">
+                <label>Full Name*</label>
+                <input type="text" th:field="*{name}" required>
+            </div>
+
+            <div class="form-group">
+                <label>Email*</label>
+                <input type="email" th:field="*{email}" required>
+            </div>
+
+            <div class="form-group">
+                <label>Phone*</label>
+                <input type="tel" th:field="*{phone}" required>
+            </div>
+
+            <div class="form-group">
+                <label>Password*</label>
+                <input type="password" th:field="*{password}" required minlength="6">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Date of Birth</label>
+                    <input type="date" th:field="*{dateOfBirth}">
+                </div>
+
+                <div class="form-group">
+                    <label>Gender</label>
+                    <select th:field="*{gender}">
+                        <option value="">Select</option>
+                        <option th:each="g : ${T(com.barinventory.customer.entity.Customer.Gender).values()}" 
+                                th:value="${g}" th:text="${g}"></option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Weight (kg)</label>
+                <input type="number" th:field="*{weight}" step="0.1">
+            </div>
+
+            <button type="submit" class="btn-primary">Create Account</button>
+        </form>
+
+        <div class="login-link">
+            Already have an account?
+            <a th:href="@{/customer/login}">Sign In</a>
+        </div>
+
+    </div>
+</div>
+</body>
+</html>

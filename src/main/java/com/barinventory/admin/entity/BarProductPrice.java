@@ -1,14 +1,30 @@
 package com.barinventory.admin.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
-
 import java.math.BigDecimal;
-import java.util.List;
+
+import com.barinventory.brands.entity.BrandSize;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
-@Table(name = "bar_product_prices", 
-       uniqueConstraints = @UniqueConstraint(columnNames = {"bar_id", "product_id"}))
+@Table(
+    name = "bar_product_prices",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"bar_id", "brand_size_id"})
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,20 +36,25 @@ public class BarProductPrice {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    // ✅ BAR
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bar_id", nullable = false)
     private Bar bar;
     
+    // ✅ FIX: Replace Product with BrandSize
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
+    @JoinColumn(name = "brand_size_id", nullable = false)
+    private BrandSize brandSize;
     
+    // 💰 Selling price (per peg / bottle depending on usage)
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal sellingPrice; // Price per bottle/unit
+    private BigDecimal sellingPrice;
     
+    // 💰 Cost price (optional but useful)
     @Column(precision = 10, scale = 2)
-    private BigDecimal costPrice; // Optional: for profit calculation
+    private BigDecimal costPrice;
     
+    // ✅ Active flag
     @Column(nullable = false)
     private Boolean active = true;
 }

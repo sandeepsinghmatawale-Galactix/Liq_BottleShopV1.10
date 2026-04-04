@@ -1,12 +1,16 @@
 package com.barinventory.admin.controller;
 
 import com.barinventory.admin.entity.InventorySession;
+import com.barinventory.admin.entity.DistributionRecord;
+import com.barinventory.admin.entity.StockroomInventory;
+import com.barinventory.admin.entity.WellInventory;
 import com.barinventory.admin.service.InventorySessionService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -16,68 +20,79 @@ public class InventorySessionController {
 
     private final InventorySessionService sessionService;
 
-    // ✅ CREATE SESSION (SETUP)
-    @PostMapping("/initialize")
-    public ResponseEntity<InventorySession> initializeSession(
-            @RequestParam Long barId) {
+    // =========================================================
+    // SESSION
+    // =========================================================
 
-        return ResponseEntity.ok(sessionService.createSetupSession(barId));
+    @PostMapping("/create")
+    public ResponseEntity<InventorySession> createSession(@RequestParam Long barId) {
+        return ResponseEntity.ok(sessionService.createSession(barId));
     }
 
-    // ✅ SAVE STOCKROOM (FORM-BASED)
+    @GetMapping("/{sessionId}")
+    public ResponseEntity<InventorySession> getSession(@PathVariable Long sessionId) {
+        return ResponseEntity.ok(sessionService.getSession(sessionId));
+    }
+
+    @GetMapping("/bar/{barId}")
+    public ResponseEntity<List<InventorySession>> getSessionsByBar(@PathVariable Long barId) {
+        return ResponseEntity.ok(sessionService.getSessionsByBar(barId));
+    }
+
+    // =========================================================
+    // STOCKROOM
+    // =========================================================
+
     @PostMapping("/{sessionId}/stockroom")
     public ResponseEntity<Map<String, String>> saveStockroom(
             @PathVariable Long sessionId,
             @RequestBody Map<String, String> formData) {
 
-        sessionService.saveSetupStockroom(sessionId, formData);
+        sessionService.saveStockroomFromForm(sessionId, formData);
 
-        return ResponseEntity.ok(Map.of("message", "Stockroom inventory saved"));
+        return ResponseEntity.ok(Map.of("message", "Stockroom saved"));
     }
 
-    // ❌ REMOVED: createDistributionRecords (not in service)
+    @GetMapping("/{sessionId}/stockroom")
+    public ResponseEntity<List<StockroomInventory>> getStockroom(@PathVariable Long sessionId) {
+        return ResponseEntity.ok(sessionService.getStockroomBySession(sessionId));
+    }
 
-    // ✅ SAVE WELLS (FORM-BASED)
+    // =========================================================
+    // DISTRIBUTION
+    // =========================================================
+
+    @PostMapping("/{sessionId}/distribution")
+    public ResponseEntity<Map<String, String>> saveDistribution(
+            @PathVariable Long sessionId,
+            @RequestBody Map<String, String> formData) {
+
+        sessionService.saveDistributionAllocations(sessionId, formData);
+
+        return ResponseEntity.ok(Map.of("message", "Distribution saved"));
+    }
+
+    @GetMapping("/{sessionId}/distribution")
+    public ResponseEntity<List<DistributionRecord>> getDistribution(@PathVariable Long sessionId) {
+        return ResponseEntity.ok(sessionService.getDistributionsBySession(sessionId));
+    }
+
+    // =========================================================
+    // WELLS
+    // =========================================================
+
     @PostMapping("/{sessionId}/wells")
     public ResponseEntity<Map<String, String>> saveWells(
             @PathVariable Long sessionId,
             @RequestBody Map<String, String> formData) {
 
-        sessionService.saveSetupWells(sessionId, formData);
+        sessionService.saveWellInventoryFromForm(sessionId, formData);
 
-        return ResponseEntity.ok(Map.of("message", "Well inventory saved"));
+        return ResponseEntity.ok(Map.of("message", "Wells saved"));
     }
 
-    // ✅ FINALIZE SESSION
-    @PostMapping("/{sessionId}/commit")
-    public ResponseEntity<Map<String, String>> commitSession(@PathVariable Long sessionId) {
-
-        try {
-            sessionService.finalizeSetupSession(sessionId);
-            return ResponseEntity.ok(Map.of("message", "Session committed successfully"));
-
-        } catch (RuntimeException e) {
-
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    // ✅ ROLLBACK
-    @PostMapping("/{sessionId}/rollback")
-    public ResponseEntity<Map<String, String>> rollbackSession(
-            @PathVariable Long sessionId,
-            @RequestParam String reason) {
-
-        sessionService.rollbackSession(sessionId, reason);
-
-        return ResponseEntity.ok(Map.of("message", "Session rolled back"));
-    }
-
-    // ✅ GET SESSION
-    @GetMapping("/{sessionId}")
-    public ResponseEntity<InventorySession> getSession(@PathVariable Long sessionId) {
-
-        return ResponseEntity.ok(sessionService.getSession(sessionId));
+    @GetMapping("/{sessionId}/wells")
+    public ResponseEntity<List<WellInventory>> getWells(@PathVariable Long sessionId) {
+        return ResponseEntity.ok(sessionService.getWellsBySession(sessionId));
     }
 }

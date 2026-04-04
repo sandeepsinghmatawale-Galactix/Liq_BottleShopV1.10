@@ -44,7 +44,7 @@ public class InventorySession {
 	@Column(name = "session_id") // ← add this
 	private Long sessionId;
 
-	@ManyToOne(fetch = FetchType.EAGER) // or rely on JOIN FETCH above
+	@ManyToOne(fetch = FetchType.LAZY) // or rely on JOIN FETCH above
 	@JoinColumn(name = "bar_id")
 	private Bar bar;
 

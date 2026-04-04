@@ -27,4 +27,25 @@ public interface SalesRecordRepository extends JpaRepository<SalesRecord, Long> 
         @Param("barId") Long barId,
         @Param("startDate") LocalDateTime startDate,
         @Param("endDate") LocalDateTime endDate);
+    
+    @Query("""
+    	    SELECT 
+    	        bs.id,
+    	        b.brandName,
+    	        bs.sizeLabel,
+    	        SUM(s.quantitySold),
+    	        SUM(s.totalRevenue)
+    	    FROM SalesRecord s
+    	    JOIN s.brandSize bs
+    	    JOIN bs.brand b
+    	    WHERE s.session.bar.barId = :barId
+    	      AND s.session.sessionStartTime BETWEEN :startDate AND :endDate
+    	    GROUP BY bs.id, b.brandName, bs.sizeLabel
+    	""")
+    	List<Object[]> getProductSummaryRaw(
+    	    @Param("barId") Long barId,
+    	    @Param("startDate") LocalDateTime startDate,
+    	    @Param("endDate") LocalDateTime endDate
+    	);
+    
 }

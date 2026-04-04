@@ -1,18 +1,22 @@
 package com.barinventory.admin.config;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+
+import com.barinventory.admin.service.UserDetailsServiceImpl;
+
+import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
@@ -20,160 +24,174 @@ import org.springframework.security.web.SecurityFilterChain;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final UserDetailsService userDetailsService;
+	private final UserDetailsServiceImpl userDetailsService;
 
-    // =================================================================================
-    // PASSWORD ENCODER
-    // =================================================================================
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(10);
-    }
+	// =================================================================================
+	// PASSWORD ENCODER
+	// =================================================================================
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder(10);
+	}
 
-    // =================================================================================
-    // AUTH PROVIDER
-    // =================================================================================
-    @Bean
-    public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
-    }
+	// =================================================================================
+	// AUTH MANAGER
+	// =================================================================================
+	@Bean
+	public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+		return config.getAuthenticationManager();
+	}
 
-    // =================================================================================
-    // AUTH MANAGER
-    // =================================================================================
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
+	// =================================================================================
+	// AUTH PROVIDER
+	// =================================================================================
+	@Bean
+	public DaoAuthenticationProvider authenticationProvider() {
+		DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+		authProvider.setUserDetailsService(userDetailsService);
+		authProvider.setPasswordEncoder(passwordEncoder());
+		return authProvider;
+	}
 
-    // =================================================================================
-    // SECURITY FILTER CHAIN
-    // =================================================================================
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+	// =================================================================================
+	// CUSTOMER SECURITY CHAIN (Order 1 - Higher Priority)
+	// =================================================================================
+	@Bean
+	@Order(1)
+	public SecurityFilterChain customerSecurityFilterChain(HttpSecurity http) throws Exception {
+		http.securityMatcher("/customer/**")
 
-        http
+				.csrf(csrf -> csrf.ignoringRequestMatchers("/customer/api/**"))
 
-            // =================================================================================
-            // CSRF CONFIG
-            // =================================================================================
-            .csrf(csrf -> csrf
-                .ignoringRequestMatchers("/api/**", "/sessions/wells/*/save")
-            )
+				.authenticationProvider(authenticationProvider())
 
-            // =================================================================================
-            // AUTH PROVIDER
-            // =================================================================================
-            .authenticationProvider(authenticationProvider())
+				.authorizeHttpRequests(auth -> auth
+						.requestMatchers("/customer/login", "/customer/register").permitAll()
+						.requestMatchers("/customer/api/**").hasRole("CUSTOMER")
+						.requestMatchers("/customer/**").hasRole("CUSTOMER")
+						.anyRequest().authenticated())
 
-            // =================================================================================
-            // AUTHORIZATION RULES
-            // =================================================================================
-            .authorizeHttpRequests(auth -> auth
+				.formLogin(form -> form.loginPage("/customer/login")
+						.loginProcessingUrl("/customer/login")
+						.usernameParameter("email")
+						.passwordParameter("password")
+						.successHandler((request, response, authentication) -> {
+							response.sendRedirect("/customer/dashboard");
+						})
+						.failureUrl("/customer/login?error=true")
+						.permitAll())
 
-                // ✅ Static resources
-                .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
+				.logout(logout -> logout.logoutRequestMatcher(new AntPathRequestMatcher("/customer/logout"))
+						.logoutSuccessUrl("/customer/login?logout=true")
+						.invalidateHttpSession(true)
+						.deleteCookies("JSESSIONID")
+						.permitAll())
 
-                // ✅ Public pages
-                .requestMatchers("/login", "/error", "/").permitAll()
-                .requestMatchers("/invoices/**").permitAll()
+				.sessionManagement(session -> session.maximumSessions(3)
+						.maxSessionsPreventsLogin(false))
 
-                // ✅ IMPORTANT: Allow select-bar flow
-                .requestMatchers("/select-bar", "/switch-bar/**").authenticated()
+				.exceptionHandling(ex -> ex.accessDeniedHandler((request, response, e) -> {
+					response.sendRedirect("/customer/login?error=403");
+				}));
 
-                // ✅ Dashboard (requires login + bar selection handled in controller)
-                .requestMatchers("/dashboard").authenticated()
+		return http.build();
+	}
 
-                // ✅ Admin only (GLOBAL role)
-                .requestMatchers("/admin/**").hasRole("ADMIN")
 
-                // ✅ Bar-related modules (controlled via JOIN table logic)
-                .requestMatchers(
-                        "/bars/**",
-                        "/sessions/**",
-                        "/stockroom/**",
-                        "/inventory/**",
-                        "/api/**"
-                ).authenticated()
+	// =================================================================================
+	// ADMIN/STAFF SECURITY CHAIN (Order 2 - Lower Priority)
+	// =================================================================================
+	@Bean
+	@Order(2)
+	public SecurityFilterChain adminSecurityFilterChain(HttpSecurity http) throws Exception {
+		http
+				// =================================================================================
+				// CSRF CONFIG
+				// =================================================================================
+				.csrf(csrf -> csrf.ignoringRequestMatchers("/api/**", "/sessions/wells/*/save"))
 
-                // ✅ Everything else
-                .anyRequest().authenticated()
-            )
+				// =================================================================================
+				// AUTH PROVIDER
+				// =================================================================================
+				.authenticationProvider(authenticationProvider())
 
-            // =================================================================================
-            // LOGIN CONFIG
-            // =================================================================================
-            .formLogin(form -> form
-                .loginPage("/login")
-                .loginProcessingUrl("/login")
-                .usernameParameter("email")
-                .passwordParameter("password")
+				// =================================================================================
+				// AUTHORIZATION RULES
+				// =================================================================================
+				.authorizeHttpRequests(auth -> auth
+						// ✅ Static resources
+						.requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
 
-                // ✅ FINAL SUCCESS HANDLER (MULTI-BAR FLOW)
-                .successHandler((request, response, authentication) -> {
+						// ✅ Public pages
+						.requestMatchers("/login", "/error", "/").permitAll().requestMatchers("/invoices/**")
+						.permitAll()
 
-                    com.barinventory.admin.entity.User user =
-                            (com.barinventory.admin.entity.User) authentication.getPrincipal();
+						// ✅ IMPORTANT: Allow select-bar flow
+						.requestMatchers("/select-bar", "/switch-bar/**").authenticated()
 
-                    // 👉 If system ADMIN → go directly
-                    if (user.getRole().name().equals("ADMIN")) {
-                        response.sendRedirect("/dashboard");
-                        return;
-                    }
+						// ✅ Dashboard (requires login + bar selection handled in controller)
+						.requestMatchers("/dashboard").authenticated()
 
-                    // 👉 Otherwise → select bar
-                    response.sendRedirect("/select-bar");
-                })
+						// ✅ Admin only (GLOBAL role)
+						.requestMatchers("/admin/**").hasRole("ADMIN")
 
-                .failureUrl("/login?error=true")
-                .permitAll()
-            )
+						// ✅ Bar-related modules (controlled via JOIN table logic)
+						.requestMatchers("/bars/**", "/sessions/**", "/stockroom/**", "/inventory/**", "/api/**")
+						.authenticated()
 
-            // =================================================================================
-            // LOGOUT CONFIG
-            // =================================================================================
-            .logout(logout -> logout
-                .logoutUrl("/logout")
-                .logoutSuccessUrl("/login?logout=true")
-                .invalidateHttpSession(true)
-                .deleteCookies("JSESSIONID")
-                .permitAll()
-            )
+						// ✅ Everything else
+						.anyRequest().authenticated())
 
-            // =================================================================================
-            // SESSION MANAGEMENT
-            // =================================================================================
-            .sessionManagement(session -> session
-                .maximumSessions(1)
-                .maxSessionsPreventsLogin(false)
-            )
+				// =================================================================================
+				// LOGIN CONFIG
+				// =================================================================================
+				.formLogin(form -> form.loginPage("/login").loginProcessingUrl("/login").usernameParameter("email")
+						.passwordParameter("password")
 
-            // =================================================================================
-            // EXCEPTION HANDLING
-            // =================================================================================
-            .exceptionHandling(ex -> ex
-                .accessDeniedHandler((request, response, accessDeniedException) -> {
+						// ✅ FINAL SUCCESS HANDLER (MULTI-BAR FLOW)
+						.successHandler((request, response, authentication) -> {
+							com.barinventory.admin.entity.User user = (com.barinventory.admin.entity.User) authentication
+									.getPrincipal();
 
-                    String uri = request.getRequestURI();
+							// 👉 If system ADMIN → go directly
+							if (user.getRole().name().equals("ADMIN")) {
+								response.sendRedirect("/dashboard");
+								return;
+							}
 
-                    // ✅ API → JSON
-                    if (uri.startsWith("/api/")) {
-                        response.setStatus(403);
-                        response.setContentType("application/json");
-                        response.getWriter().write(
-                            "{\"error\":\"Forbidden\",\"path\":\"" + uri + "\"}"
-                        );
-                    } 
-                    // ✅ UI → redirect
-                    else {
-                        response.sendRedirect("/login?error=403");
-                    }
-                })
-            );
+							// 👉 Otherwise → select bar
+							response.sendRedirect("/select-bar");
+						})
 
-        return http.build();
-    }
+						.failureUrl("/login?error=true").permitAll())
+
+				// =================================================================================
+				// LOGOUT CONFIG
+				// =================================================================================
+				.logout(logout -> logout.logoutUrl("/logout").logoutSuccessUrl("/login?logout=true")
+						.invalidateHttpSession(true).deleteCookies("JSESSIONID").permitAll())
+
+				// =================================================================================
+				// SESSION MANAGEMENT
+				// =================================================================================
+				.sessionManagement(session -> session.maximumSessions(1) // Strict for admin/staff
+						.maxSessionsPreventsLogin(false))
+
+				// =================================================================================
+				// EXCEPTION HANDLING
+				// =================================================================================
+				.exceptionHandling(ex -> ex.accessDeniedHandler((request, response, e) -> {
+				    var auth = org.springframework.security.core.context.SecurityContextHolder
+				            .getContext().getAuthentication();
+
+				    System.out.println("403 URI = " + request.getRequestURI());
+				    System.out.println("User = " + (auth != null ? auth.getName() : "anonymous"));
+				    System.out.println("Authorities = " + (auth != null ? auth.getAuthorities() : "none"));
+
+				    response.sendRedirect("/login?error=403");
+				}));
+
+
+		return http.build();
+	}
 }

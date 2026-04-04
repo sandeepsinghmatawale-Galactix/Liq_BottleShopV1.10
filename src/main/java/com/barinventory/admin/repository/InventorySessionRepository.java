@@ -44,5 +44,7 @@ public interface InventorySessionRepository extends JpaRepository<InventorySessi
 //	Optional<InventorySession> findTopByBar_BarIdOrderBySessionDateDesc(Long barId);
 	
 	Optional<InventorySession> findTopByBar_BarIdOrderBySessionStartTimeDesc(Long barId);
+	
+	Optional<InventorySession> findTopByBarBarIdOrderBySessionStartTimeDesc(Long barId);
 
 }

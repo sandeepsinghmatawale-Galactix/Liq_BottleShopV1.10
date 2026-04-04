@@ -3,10 +3,12 @@ package com.barinventory.brands.service;
 import java.util.List;
 
 import com.barinventory.admin.dto.BrandSizeProductDTO;
+import com.barinventory.billing.dtos.BrandBillingDTO;
 import com.barinventory.brands.dtos.BrandDTO;
 import com.barinventory.brands.dtos.BrandFormDTO;
 import com.barinventory.brands.dtos.BrandSizeDTO;
 import com.barinventory.brands.entity.Brand;
+ 
 
 public interface BrandService {
 
@@ -27,5 +29,11 @@ public interface BrandService {
 	    List<BrandSizeProductDTO> getAllActiveProducts();
 	    
 	    List<BrandSizeDTO> getAllBrandSizes();
+	    
+	    List<Brand> getAllActiveBrandsForCustomer();
+	    
+	    public List<BrandBillingDTO> getAllActiveBrands2();
+	    
+	 
 
 }

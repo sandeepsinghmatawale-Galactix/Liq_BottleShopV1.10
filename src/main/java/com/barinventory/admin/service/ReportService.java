@@ -1,18 +1,19 @@
 package com.barinventory.admin.service;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
 import com.barinventory.admin.entity.InventorySession;
 import com.barinventory.admin.entity.SalesRecord;
 import com.barinventory.admin.repository.InventorySessionRepository;
 import com.barinventory.admin.repository.SalesRecordRepository;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +26,8 @@ public class ReportService {
      * Get total sales for a session
      */
     public BigDecimal getSessionTotalSales(Long sessionId) {
-        return salesRepository.getTotalRevenueBySession(sessionId);
+        BigDecimal result = salesRepository.getTotalRevenueBySession(sessionId);
+        return result != null ? result : BigDecimal.ZERO;
     }
     
     /**
@@ -47,11 +49,11 @@ public class ReportService {
         List<SalesRecord> sales = getSalesByDateRange(barId, startOfDay, endOfDay);
         
         BigDecimal totalRevenue = sales.stream()
-            .map(SalesRecord::getTotalRevenue)
+            .map(s -> safe(s.getTotalRevenue()))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         BigDecimal totalCost = sales.stream()
-            .map(SalesRecord::getTotalCost)
+            .map(s -> safe(s.getTotalCost()))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         BigDecimal totalProfit = totalRevenue.subtract(totalCost);
@@ -73,7 +75,7 @@ public class ReportService {
         List<SalesRecord> sales = getSalesByDateRange(barId, weekStart, weekEnd);
         
         BigDecimal totalRevenue = sales.stream()
-            .map(SalesRecord::getTotalRevenue)
+            .map(s -> safe(s.getTotalRevenue()))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         return Map.of(
@@ -94,26 +96,27 @@ public class ReportService {
         List<SalesRecord> sales = getSalesByDateRange(barId, monthStart, monthEnd);
         
         BigDecimal totalRevenue = sales.stream()
-            .map(SalesRecord::getTotalRevenue)
+            .map(s -> safe(s.getTotalRevenue()))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         
-        // Group by product
+        // ✅ FIXED: BrandSize instead of Product
         Map<String, BigDecimal> productWiseSales = sales.stream()
-            .collect(Collectors.groupingBy(
-                s -> s.getProduct().getProductName(),
-                Collectors.reducing(BigDecimal.ZERO,
-                    SalesRecord::getTotalRevenue,
-                    BigDecimal::add)
-            ));
+        	    .collect(Collectors.groupingBy(
+        	        this::getProductKey,
+        	        Collectors.mapping(
+        	            s -> safe(s.getTotalRevenue()),
+        	            Collectors.reducing(BigDecimal.ZERO, BigDecimal::add)
+        	        )
+        	    ));
         
-        return Map.of(
-            "year", year,
-            "month", month,
-            "salesRecords", sales,
-            "totalRevenue", totalRevenue,
-            "productWiseSales", productWiseSales
-        );
-    }
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("year", year);
+        result.put("month", month);
+        result.put("salesRecords", sales);
+        result.put("totalRevenue", totalRevenue);
+        result.put("productWiseSales", productWiseSales);
+
+        return result;    }
     
     /**
      * Get audit trail for sessions
@@ -132,23 +135,58 @@ public class ReportService {
                                                     LocalDateTime endDate) {
         List<SalesRecord> sales = getSalesByDateRange(barId, startDate, endDate);
         
+        // ✅ FIXED: BrandSize instead of Product
         Map<String, Map<String, Object>> productSummary = sales.stream()
-            .collect(Collectors.groupingBy(
-                s -> s.getProduct().getProductName(),
-                Collectors.collectingAndThen(
-                    Collectors.toList(),
-                    list -> Map.of(
-                        "totalQuantity", list.stream()
-                            .map(SalesRecord::getQuantitySold)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add),
-                        "totalRevenue", list.stream()
-                            .map(SalesRecord::getTotalRevenue)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add),
-                        "count", list.size()
-                    )
-                )
-            ));
+        	    .collect(Collectors.groupingBy(this::getProductKey))
+        	    .entrySet()
+        	    .stream()
+        	    .collect(Collectors.toMap(
+        	        Map.Entry::getKey,
+        	        e -> {
+        	            List<SalesRecord> list = e.getValue();
+
+        	            BigDecimal totalQty = list.stream()
+        	                .map(s -> safe(s.getQuantitySold()))
+        	                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        	            BigDecimal totalRevenue = list.stream()
+        	                .map(s -> safe(s.getTotalRevenue()))
+        	                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        	            Map<String, Object> map = new java.util.HashMap<>();
+        	            map.put("totalQuantity", totalQty);
+        	            map.put("totalRevenue", totalRevenue);
+        	            map.put("count", list.size());
+
+        	            return map;
+        	        }
+        	    ));
         
-        return Map.of("productSummary", productSummary);
+       Map<String, Object> result = new java.util.HashMap<>();
+        result.put("productSummary", productSummary);
+        return result;
     }
+    
+    // =========================================================
+    // HELPER
+    // =========================================================
+    private BigDecimal safe(BigDecimal val) {
+        return val == null ? BigDecimal.ZERO : val;
+    }
+    
+    private String getProductKey(SalesRecord s) {
+        if (s.getBrandSize() == null) return "Unknown";
+
+        String brand = s.getBrandSize().getBrand() != null
+                ? s.getBrandSize().getBrand().getBrandName()
+                : "Unknown";
+
+        String size = s.getBrandSize().getSizeLabel() != null
+                ? s.getBrandSize().getSizeLabel()
+                : "";
+
+        return brand + " " + size;
+    }
+    
+    
 }

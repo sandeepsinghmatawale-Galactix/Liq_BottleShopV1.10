@@ -10,14 +10,20 @@ import java.util.Optional;
 
 @Repository
 public interface BarProductPriceRepository extends JpaRepository<BarProductPrice, Long> {
-    
-    List<BarProductPrice> findByBarBarId(Long barId);
-    
-    Optional<BarProductPrice> findByBarBarIdAndProductProductId(Long barId, Long productId);
-    
-    List<BarProductPrice> findByBarBarIdAndActiveTrue(Long barId);
-    
-    Optional<BarProductPrice> findByBarBarIdAndBrandSizeId(Long barId, Long brandSizeId);
-    
-    
+
+	List<BarProductPrice> findByBarBarId(Long barId);
+
+	List<BarProductPrice> findByBarBarIdAndActiveTrue(Long barId);
+
+	Optional<BarProductPrice> findByBarBarIdAndBrandSizeId(Long barId, Long brandSizeId);
+
+	Optional<BarProductPrice> findByBar_BarIdAndBrandSize_Id(Long barId, Long brandSizeId);
+	
+	 List<BarProductPrice> findByBar_BarId(Long barId);
+
+	    List<BarProductPrice> findByBar_BarIdAndActiveTrue(Long barId);
+
+	    
+	    boolean existsByBar_BarIdAndBrandSize_Id(Long barId, Long brandSizeId);
+
 }

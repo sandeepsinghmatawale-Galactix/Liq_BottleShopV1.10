@@ -19,63 +19,62 @@ import com.barinventory.brands.entity.BrandSize;
 @Repository
 public interface WellInventoryRepository extends JpaRepository<WellInventory, Long> {
 
-	// --------------------------
-	// Find by session
-	// --------------------------
-	List<WellInventory> findBySessionSessionId(Long sessionId);
+    // --------------------------
+    // BASIC FINDERS
+    // --------------------------
 
-	List<WellInventory> findBySessionSessionIdAndBrandSizeId(Long sessionId, Long brandSizeId);
+    List<WellInventory> findBySessionSessionId(Long sessionId);
 
-	List<WellInventory> findBySessionSessionIdAndProductProductId(Long sessionId, Long productId);
+    List<WellInventory> findBySessionSessionIdAndBrandSizeId(Long sessionId, Long brandSizeId);
 
-	List<WellInventory> findBySessionSessionIdAndBrandSize(Long sessionId, BrandSize brandSize);
+    List<WellInventory> findBySessionSessionIdAndBrandSize(Long sessionId, BrandSize brandSize);
 
-	List<WellInventory> findBySessionId(Long sessionId);
+    List<WellInventory> findBySessionSessionIdAndBarWell_Id(Long sessionId, Long barWellId);
 
-	List<WellInventory> findBySessionIdAndBrandSizeId(Long sessionId, Long brandSizeId);
+    List<WellInventory> findBySessionSessionIdAndBarWellAndBrandSize(Long sessionId, BarWell barWell, BrandSize brandSize);
 
-	List<WellInventory> findBySessionIdAndBrandSize(Long sessionId, BrandSize brandSize);
+    // --------------------------
+    // OPTIONAL SINGLE RECORD
+    // --------------------------
 
-	// --------------------------
-	// Aggregate sums
-	// --------------------------
+    Optional<WellInventory> findBySessionAndBarWellAndBrandSize(
+            InventorySession session,
+            BarWell barWell,
+            BrandSize brandSize
+    );
 
-	@Query("SELECT COALESCE(SUM(w.receivedFromDistribution), 0) " + "FROM WellInventory w "
-			+ "WHERE w.session.sessionId = :sessionId AND w.product.productId = :productId")
-	BigDecimal sumReceivedBySessionAndProduct(@Param("sessionId") Long sessionId, @Param("productId") Long productId);
+    // ✅ BEST METHOD (Replaces broken custom query)
+    Optional<WellInventory> findBySession_SessionIdAndBarWell_Id(Long sessionId, Long barWellId);
 
-	@Query("SELECT COALESCE(SUM(w.consumed), 0) " + "FROM WellInventory w "
-			+ "WHERE w.session.sessionId = :sessionId AND w.product.productId = :productId")
-	BigDecimal sumConsumedBySessionAndProduct(@Param("sessionId") Long sessionId, @Param("productId") Long productId);
+    // --------------------------
+    // AGGREGATE SUMS
+    // --------------------------
 
-	@Query("SELECT COALESCE(SUM(w.receivedFromDistribution), 0) " + "FROM WellInventory w "
-			+ "WHERE w.session.id = :sessionId AND w.brandSize.id = :brandSizeId")
-	BigDecimal sumReceivedBySessionAndBrandSize(@Param("sessionId") Long sessionId,
-			@Param("brandSizeId") Long brandSizeId);
+    @Query("SELECT COALESCE(SUM(w.receivedFromDistribution), 0) " +
+           "FROM WellInventory w " +
+           "WHERE w.session.sessionId = :sessionId " +
+           "AND w.brandSize.id = :brandSizeId")
+    BigDecimal sumReceivedBySessionAndBrandSize(
+            @Param("sessionId") Long sessionId,
+            @Param("brandSizeId") Long brandSizeId
+    );
 
-	@Query("SELECT COALESCE(SUM(w.consumed), 0) " + "FROM WellInventory w "
-			+ "WHERE w.session.id = :sessionId AND w.brandSize.id = :brandSizeId")
-	BigDecimal sumConsumedBySessionAndBrandSize(@Param("sessionId") Long sessionId,
-			@Param("brandSizeId") Long brandSizeId);
+    @Query("SELECT COALESCE(SUM(w.consumed), 0) " +
+           "FROM WellInventory w " +
+           "WHERE w.session.sessionId = :sessionId " +
+           "AND w.brandSize.id = :brandSizeId")
+    BigDecimal sumConsumedBySessionAndBrandSize(
+            @Param("sessionId") Long sessionId,
+            @Param("brandSizeId") Long brandSizeId
+    );
 
-	// --------------------------
-	// Delete & count
-	// --------------------------
-	@Modifying
-	@Transactional
-	void deleteBySessionSessionId(Long sessionId);
+    // --------------------------
+    // DELETE & COUNT
+    // --------------------------
 
-	long countBySessionSessionId(Long sessionId);
+    @Modifying
+    @Transactional
+    void deleteBySessionSessionId(Long sessionId);
 
-	@Modifying
-	@Transactional
-	void deleteBySessionId(Long sessionId);
-
-	long countBySessionId(Long sessionId);
-
-	// --------------------------
-	// Optional finder by session, bar well, and brand size
-	// --------------------------
-	Optional<WellInventory> findBySessionAndBarWellAndBrandSize(InventorySession session, BarWell barWell,
-			BrandSize brandSize);
+    long countBySessionSessionId(Long sessionId);
 }

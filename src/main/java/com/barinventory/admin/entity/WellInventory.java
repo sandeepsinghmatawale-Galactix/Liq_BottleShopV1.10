@@ -45,8 +45,11 @@ public class WellInventory {
 	@JoinColumn(name = "brand_size_id", nullable = false)
 	private BrandSize brandSize;
 	
-	@Column(nullable = false, length = 50)
-	private String wellName; // BAR_1, BAR_2, SERVICE_BAR, etc.
+	 
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "bar_well_id", nullable = false)
+	private BarWell barWell;
 
 	@Column(nullable = false, precision = 10, scale = 2)
 	private BigDecimal openingStock = BigDecimal.ZERO;

@@ -1,7 +1,5 @@
 package com.barinventory.admin.service;
 
- 
-
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -12,38 +10,52 @@ import com.barinventory.admin.dto.BrandSizeProductDTO;
 import com.barinventory.brands.entity.Brand;
 import com.barinventory.brands.entity.BrandSize;
 import com.barinventory.brands.repository.BrandRepository;
+import com.barinventory.brands.repository.BrandSizeRepository;
 
 import lombok.RequiredArgsConstructor;
 
- 
 @Service
 @RequiredArgsConstructor
 public class BrandSizeProductService {
 
     private final BrandRepository brandRepository;
-
+    private final BrandSizeRepository brandSizeRepository;
     
+    public BrandSize getById(Long brandSizeId) {
+        return brandSizeRepository.findById(brandSizeId)
+                .orElseThrow(() -> new RuntimeException("BrandSize not found: " + brandSizeId));
+    }
 
+    public List<BrandSize> getAll() {
+        return brandSizeRepository.findAll();
+    }
+
+    // ---------------------------
+    // COMMON DTO MAPPER
+    // ---------------------------
     private BrandSizeProductDTO toDTO(Brand brand, BrandSize size) {
-        // productName = "Old Monk 750ml" — matches what admin sees on screen
+
         String name = brand.getBrandName()
-                    + (size.getSizeLabel() != null ? " " + size.getSizeLabel() : "");
+                + (size.getSizeLabel() != null ? " " + size.getSizeLabel() : "");
 
         String category = brand.getCategory() != null
-                ? brand.getCategory().name() : null;
+                ? brand.getCategory().name()
+                : "";
 
         BigDecimal volumeML = size.getVolumeMl() != null
-                ? BigDecimal.valueOf(size.getVolumeMl()) : null;
+                ? BigDecimal.valueOf(size.getVolumeMl())
+                : BigDecimal.ZERO; // ✅ SAFE
 
         return new BrandSizeProductDTO(
-                size.getId(),           // BrandSize.id → used as productId in field names
+                size.getId(),     // ✅ this is your "productId"
                 name,
                 category,
                 brand.getBrandName(),
                 volumeML
         );
     }
-  @Transactional(readOnly = true)
+ 
+    @Transactional
     public List<BrandSizeProductDTO> getAllActiveProducts() {
 
         return brandRepository.findAllActiveWithActiveSizes()
@@ -51,20 +63,7 @@ public class BrandSizeProductService {
 
                 .flatMap(brand -> brand.getSizes().stream()
                         .filter(BrandSize::isActive)
-                        .map(size -> new BrandSizeProductDTO(
-
-                                size.getId(),
-
-                                brand.getBrandName() + " " + size.getSizeLabel(),
-
-                                brand.getCategory() != null
-                                        ? brand.getCategory().name()
-                                        : "",
-
-                                brand.getBrandName(),
-
-                                BigDecimal.valueOf(size.getVolumeMl())   // FIX HERE
-                        ))
+                        .map(size -> toDTO(brand, size)) // ✅ FIXED
                 )
 
                 .sorted((a, b) -> {
@@ -81,8 +80,4 @@ public class BrandSizeProductService {
 
                 .toList();
     }
-  
-  
-  
-  
 }

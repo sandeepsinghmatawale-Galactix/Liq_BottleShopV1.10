@@ -1,5 +1,4 @@
 package com.barinventory.admin.service;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -10,8 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.barinventory.admin.entity.Bar;
 import com.barinventory.admin.entity.BarProductPrice;
-import com.barinventory.admin.entity.Product;
 import com.barinventory.admin.repository.BarProductPriceRepository;
+import com.barinventory.brands.entity.BrandSize;
 
 import lombok.RequiredArgsConstructor;
 
@@ -21,27 +20,38 @@ public class PricingService {
     
     private final BarProductPriceRepository priceRepository;
     private final BarService barService;
-    private final ProductService productService;
+    private final BrandSizeProductService brandSizeService; // ✅ FIXED
     
+    // ---------------------------
+    // GET ALL PRICES
+    // ---------------------------
     public List<BarProductPrice> getPricesByBar(Long barId) {
-        return priceRepository.findByBarBarIdAndActiveTrue(barId);
+        return priceRepository.findByBar_BarIdAndActiveTrue(barId);
     }
     
-    public BarProductPrice getPrice(Long barId, Long productId) {
-        return priceRepository.findByBarBarIdAndProductProductId(barId, productId)
-            .orElseThrow(() -> new RuntimeException("Price not configured for this product"));
+    // ---------------------------
+    // GET SINGLE PRICE
+    // ---------------------------
+    public BarProductPrice getPrice(Long barId, Long brandSizeId) {
+        return priceRepository
+            .findByBar_BarIdAndBrandSize_Id(barId, brandSizeId)
+            .orElseThrow(() -> new RuntimeException("Price not configured for this brand size"));
     }
     
+    // ---------------------------
+    // SET / UPDATE PRICE
+    // ---------------------------
     @Transactional
-    public BarProductPrice setPrice(Long barId, Long productId, BarProductPrice priceDetails) {
+    public BarProductPrice setPrice(Long barId, Long brandSizeId, BarProductPrice priceDetails) {
+        
         Bar bar = barService.getBarById(barId);
-        Product product = productService.getProductById(productId);
+        BrandSize brandSize = brandSizeService.getById(brandSizeId); // ✅ FIX
         
         BarProductPrice price = priceRepository
-            .findByBarBarIdAndProductProductId(barId, productId)
+            .findByBar_BarIdAndBrandSize_Id(barId, brandSizeId)
             .orElse(BarProductPrice.builder()
                 .bar(bar)
-                .product(product)
+                .brandSize(brandSize)
                 .build());
         
         price.setSellingPrice(priceDetails.getSellingPrice());
@@ -51,6 +61,9 @@ public class PricingService {
         return priceRepository.save(price);
     }
     
+    // ---------------------------
+    // DEACTIVATE
+    // ---------------------------
     @Transactional
     public void deactivatePrice(Long priceId) {
         BarProductPrice price = priceRepository.findById(priceId)
@@ -59,37 +72,45 @@ public class PricingService {
         priceRepository.save(price);
     }
     
+    // ---------------------------
+    // PRICE MAP (IMPORTANT FIX)
+    // ---------------------------
     public Map<Long, BarProductPrice> getPriceMapForBar(Long barId) {
 
-        List<BarProductPrice> prices = 
-        		priceRepository.findByBarBarIdAndActiveTrue(barId);
+        List<BarProductPrice> prices =
+                priceRepository.findByBar_BarIdAndActiveTrue(barId);
 
         return prices.stream()
                 .collect(Collectors.toMap(
-                        price -> price.getProduct().getProductId(),  // KEY
-                        price -> price                               // VALUE
+                        price -> price.getBrandSize().getId(), // ✅ FIXED KEY
+                        price -> price
                 ));
     }
     
- // ── ADD this method — alias used by the onboarding wizard controller ──
+    // ---------------------------
+    // ALIAS
+    // ---------------------------
     public List<BarProductPrice> getPricesForBar(Long barId) {
-        return priceRepository.findByBarBarIdAndActiveTrue(barId);
+        return priceRepository.findByBar_BarIdAndActiveTrue(barId);
     }
 
-    // ── ADD this method — saves pricing form submitted during onboarding ──
+    // ---------------------------
+    // FORM SAVE (UPDATED)
+    // ---------------------------
     @Transactional
     public void savePricesFromForm(Long barId, Map<String, String> formData) {
-        Bar bar = barService.getBarById(barId);
-        List<Product> products = productService.getAllActiveProducts();
 
-        for (Product product : products) {
-            String sellKey = "sell_" + product.getProductId();
-            String costKey = "cost_" + product.getProductId();
+        Bar bar = barService.getBarById(barId);
+        List<BrandSize> brandSizes = brandSizeService.getAll(); // ✅ FIX
+
+        for (BrandSize brandSize : brandSizes) {
+
+            String sellKey = "sell_" + brandSize.getId();
+            String costKey = "cost_" + brandSize.getId();
 
             String sellVal = formData.get(sellKey);
             String costVal = formData.get(costKey);
 
-            // Skip products where admin left selling price blank
             if (sellVal == null || sellVal.isBlank()) continue;
 
             BigDecimal sellingPrice = new BigDecimal(sellVal);
@@ -97,19 +118,18 @@ public class PricingService {
                     ? new BigDecimal(costVal)
                     : null;
 
-            // Upsert — update if exists, create if not
             BarProductPrice price = priceRepository
-                    .findByBarBarIdAndProductProductId(barId, product.getProductId())
+                    .findByBar_BarIdAndBrandSize_Id(barId, brandSize.getId())
                     .orElse(BarProductPrice.builder()
                             .bar(bar)
-                            .product(product)
+                            .brandSize(brandSize)
                             .build());
 
             price.setSellingPrice(sellingPrice);
             price.setCostPrice(costPrice);
             price.setActive(true);
+
             priceRepository.save(price);
         }
     }
-    
 }

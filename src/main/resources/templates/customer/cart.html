@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart - BarInventory</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #e74c3c;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #34495e;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar-custom {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary) !important;
+            font-size: 1.5rem;
+        }
+        
+        .nav-link {
+            color: var(--dark) !important;
+            font-weight: 500;
+            margin: 0 10px;
+            transition: all 0.3s;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            color: var(--secondary) !important;
+            transform: translateY(-2px);
+        }
+        
+        .container-main {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        
+        .cart-header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+        }
+        
+        .cart-header h1 {
+            color: var(--primary);
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .cart-header .badge {
+            background: var(--secondary);
+            font-size: 1rem;
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+        
+        .cart-container {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+        }
+        
+        @media (max-width: 992px) {
+            .cart-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .cart-items {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+        }
+        
+        .cart-item {
+            display: grid;
+            grid-template-columns: 100px 1fr auto;
+            gap: 20px;
+            padding: 20px;
+            border-bottom: 2px solid var(--light);
+            transition: all 0.3s;
+        }
+        
+        .cart-item:last-child {
+            border-bottom: none;
+        }
+        
+        .cart-item:hover {
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .item-image {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+        }
+        
+        .item-details h5 {
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .item-meta {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .item-price {
+            color: var(--secondary);
+            font-weight: 700;
+            font-size: 1.3rem;
+        }
+        
+        .item-actions {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--light);
+            border-radius: 25px;
+            padding: 5px;
+        }
+        
+        .quantity-control button {
+            width: 35px;
+            height: 35px;
+            border: none;
+            border-radius: 50%;
+            background: white;
+            color: var(--primary);
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .quantity-control button:hover {
+            background: var(--primary);
+            color: white;
+            transform: scale(1.1);
+        }
+        
+        .quantity-control input {
+            width: 50px;
+            text-align: center;
+            border: none;
+            background: transparent;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .btn-remove {
+            background: none;
+            border: none;
+            color: var(--secondary);
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+        }
+        
+        .btn-remove:hover {
+            transform: scale(1.2);
+            color: #c0392b;
+        }
+        
+        .cart-summary {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+            height: fit-content;
+            position: sticky;
+            top: 100px;
+        }
+        
+        .summary-title {
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 1.4rem;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--light);
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            color: var(--dark);
+            font-size: 1rem;
+        }
+        
+        .summary-row.total {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary);
+            border-top: 2px solid var(--light);
+            margin-top: 15px;
+            padding-top: 20px;
+        }
+        
+        .summary-row.total .amount {
+            color: var(--secondary);
+        }
+        
+        .btn-checkout {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--success) 0%, #229954 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-top: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3);
+        }
+        
+        .btn-checkout:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(39, 174, 96, 0.4);
+        }
+        
+        .btn-continue {
+            width: 100%;
+            padding: 12px;
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            border-radius: 10px;
+            font-weight: 600;
+            margin-top: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-continue:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .empty-cart {
+            text-align: center;
+            padding: 80px 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+        }
+        
+        .empty-cart i {
+            font-size: 5rem;
+            color: var(--light);
+            margin-bottom: 20px;
+        }
+        
+        .empty-cart h3 {
+            color: var(--dark);
+            margin-bottom: 15px;
+        }
+        
+        .empty-cart p {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+        
+        .btn-shop {
+            padding: 12px 30px;
+            background: var(--secondary);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+        
+        .btn-shop:hover {
+            background: #c0392b;
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+        }
+        
+        .savings-badge {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/customer/dashboard">
+                <i class="fas fa-glass-cheers"></i> BarInventory
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/customer/dashboard">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/customer/explore">
+                            <i class="fas fa-search"></i> Explore
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/customer/cart">
+                            <i class="fas fa-shopping-cart"></i> Cart
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/customer/orders">
+                            <i class="fas fa-receipt"></i> Orders
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/customer/health">
+                            <i class="fas fa-heartbeat"></i> Health
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/customer/logout">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-main">
+        <!-- Cart Header -->
+        <div class="cart-header">
+            <h1>
+                <i class="fas fa-shopping-cart"></i>
+                Your Cart
+                <span class="badge" th:text="${cartItems.size()}">0</span>
+            </h1>
+        </div>
+
+        <!-- Empty Cart -->
+        <div class="empty-cart" th:if="${cartItems.isEmpty()}">
+            <i class="fas fa-shopping-cart"></i>
+            <h3>Your cart is empty</h3>
+            <p>Start adding some amazing products to your cart!</p>
+            <a href="/customer/explore" class="btn-shop">
+                <i class="fas fa-search"></i> Explore Products
+            </a>
+        </div>
+
+        <!-- Cart Content -->
+        <div class="cart-container" th:unless="${cartItems.isEmpty()}">
+            <!-- Cart Items -->
+            <div class="cart-items">
+                <div class="cart-item" th:each="item : ${cartItems}">
+                    <div class="item-image">
+                        <i class="fas fa-wine-bottle"></i>
+                    </div>
+                    
+                    <div class="item-details">
+                        <h5 th:text="${item.brandName + ' - ' + item.sizeLabel}">Brand Name - Size</h5>
+                        <div class="item-meta">
+                            <span><i class="fas fa-tag"></i> Product ID: [[${item.brandSizeId}]]</span>
+                        </div>
+                        <div class="item-price">
+                            ₹<span th:text="${#numbers.formatDecimal(item.price, 1, 2)}">0.00</span>
+                            <span style="font-size: 0.8rem; color: #7f8c8d;"> / bottle</span>
+                        </div>
+                    </div>
+                    
+                    <div class="item-actions">
+                        <button class="btn-remove" th:attr="data-item-id=${item.id}" onclick="removeItem(this)">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        
+                        <div class="quantity-control">
+                            <button onclick="updateQuantity(this, -1)" th:attr="data-item-id=${item.id}">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <input type="number" th:value="${item.quantity}" readonly>
+                            <button onclick="updateQuantity(this, 1)" th:attr="data-item-id=${item.id}">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        
+                        <div style="margin-top: 10px; font-weight: 700; color: var(--primary);">
+                            Subtotal: ₹<span th:text="${#numbers.formatDecimal(item.subtotal, 1, 2)}">0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart Summary -->
+            <div class="cart-summary">
+                <div class="summary-title">Order Summary</div>
+                
+                <div class="summary-row">
+                    <span>Items (<span th:text="${cartItems.size()}">0</span>)</span>
+                    <span>₹<span th:text="${#numbers.formatDecimal(#aggregates.sum(cartItems.![subtotal]), 1, 2)}">0.00</span></span>
+                </div>
+                
+                <div class="summary-row">
+                    <span>Delivery Fee</span>
+                    <span style="color: var(--success);">FREE</span>
+                </div>
+                
+                <div class="summary-row total">
+                    <span>Total Amount</span>
+                    <span class="amount">₹<span th:text="${#numbers.formatDecimal(#aggregates.sum(cartItems.![subtotal]), 1, 2)}">0.00</span></span>
+                </div>
+                
+                <div class="savings-badge" th:if="${#aggregates.sum(cartItems.![subtotal]) > 5000}">
+                    <i class="fas fa-gift"></i> You're saving big!
+                </div>
+                
+                <form th:action="@{/customer/cart/checkout}" method="post">
+                    <button type="submit" class="btn-checkout">
+                        <i class="fas fa-lock"></i> Proceed to Checkout
+                    </button>
+                </form>
+                
+                <a href="/customer/explore" class="btn-continue text-decoration-none d-block text-center">
+                    <i class="fas fa-arrow-left"></i> Continue Shopping
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function updateQuantity(button, change) {
+            const itemId = button.getAttribute('data-item-id');
+            const input = button.parentElement.querySelector('input');
+            let newQuantity = parseInt(input.value) + change;
+            
+            if (newQuantity < 1) {
+                if (confirm('Remove this item from cart?')) {
+                    removeItem(button);
+                }
+                return;
+            }
+            
+            if (newQuantity > 99) {
+                alert('Maximum quantity is 99');
+                return;
+            }
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/customer/cart/update';
+            
+            const idField = document.createElement('input');
+            idField.type = 'hidden';
+            idField.name = 'cartItemId';
+            idField.value = itemId;
+            
+            const qtyField = document.createElement('input');
+            qtyField.type = 'hidden';
+            qtyField.name = 'quantity';
+            qtyField.value = newQuantity;
+            
+            form.appendChild(idField);
+            form.appendChild(qtyField);
+            document.body.appendChild(form);
+            form.submit();
+        }
+        
+        function removeItem(button) {
+            const itemId = button.getAttribute('data-item-id');
+            
+            if (confirm('Are you sure you want to remove this item?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/customer/cart/remove';
+                
+                const idField = document.createElement('input');
+                idField.type = 'hidden';
+                idField.name = 'cartItemId';
+                idField.value = itemId;
+                
+                form.appendChild(idField);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
+</body>
+</html>

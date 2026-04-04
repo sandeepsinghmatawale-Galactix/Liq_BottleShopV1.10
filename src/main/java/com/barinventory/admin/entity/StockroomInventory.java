@@ -1,8 +1,8 @@
 package com.barinventory.admin.entity;
 
 import java.math.BigDecimal;
-import java.util.List;
 
+import com.barinventory.brands.entity.BrandSize;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import jakarta.persistence.Column;
@@ -18,7 +18,6 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -36,9 +35,11 @@ public class StockroomInventory {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
+	 
+	
 	@ManyToOne(fetch = FetchType.EAGER)
-	@JoinColumn(name = "product_id", nullable = false)
-	private Product product;
+	@JoinColumn(name = "brand_size_id", nullable = false)
+	private BrandSize brandSize;
 
 	@Column(nullable = false, precision = 10, scale = 2)
 	private BigDecimal openingStock = BigDecimal.ZERO; // Previous closing

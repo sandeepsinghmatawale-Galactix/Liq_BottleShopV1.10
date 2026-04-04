@@ -12,47 +12,47 @@ import org.springframework.stereotype.Repository;
 import com.barinventory.admin.entity.InventorySession;
 import com.barinventory.admin.entity.Product;
 import com.barinventory.admin.entity.StockroomInventory;
+import com.barinventory.brands.entity.BrandSize;
 
 import jakarta.transaction.Transactional;
 
 @Repository
 public interface StockroomInventoryRepository extends JpaRepository<StockroomInventory, Long> {
 
-    List<StockroomInventory> findBySession_SessionId(Long sessionId);
+	List<StockroomInventory> findBySession_SessionId(Long sessionId);
 
-    //Optional<StockroomInventory> findBySession_SessionIdAndProduct_Id(Long sessionId, Long productId);
+	 
+	@Modifying
+	@Transactional
+	void deleteBySession_SessionId(Long sessionId);
 
-    @Modifying
-    @Transactional
-    void deleteBySession_SessionId(Long sessionId);
+	 
 
-  //  @Query("SELECT s FROM StockroomInventory s WHERE s.session.sessionId = :sessionId")
-   // List<StockroomInventory> findBySession_SessionIdWithProduct(@Param("sessionId") Long sessionId);
+	long countBySession_SessionId(Long sessionId);
 
-    long countBySession_SessionId(Long sessionId);
+	// Find all stockroom entries by session
+	// --------------------------
+	List<StockroomInventory> findBySessionSessionId(Long sessionId);
 
-    Optional<StockroomInventory> findBySessionAndProduct(InventorySession session, Product product);
-    
-    // Find all stockroom entries by session
-    // --------------------------
-    List<StockroomInventory> findBySessionSessionId(Long sessionId);
+	 
+	@Modifying
+	@Transactional
+	void deleteBySessionSessionId(Long sessionId);
 
-    // --------------------------
-    // Delete all stockroom entries by session
-    // --------------------------
-    @Modifying
-    @Transactional
-    void deleteBySessionSessionId(Long sessionId);
-    
-    long countBySessionSessionId(Long sessionId);
+	long countBySessionSessionId(Long sessionId);
 
-    // --------------------------
-    // Optional: find by session entity
-    // --------------------------
-    List<StockroomInventory> findBySession(InventorySession session);
-    
-    Optional<StockroomInventory> findBySession_SessionIdAndProduct_ProductId(Long sessionId, Long productId);
-    
-    //@Query("SELECT COALESCE(SUM(s.quantity), 0) FROM StockroomInventory s WHERE s.session.sessionId = :sessionId AND s.product.productId = :productId")
-    //Integer sumQuantityBySessionAndProduct(@Param("sessionId") Long sessionId, @Param("productId") Long productId);
+ 
+	// Optional but useful - Find specific brand in session
+	@Query("SELECT s FROM StockroomInventory s WHERE s.session.sessionId = :sessionId "
+			+ "AND s.brandSize.id = :brandSizeId")
+	Optional<StockroomInventory> findBySessionAndBrandSize(@Param("sessionId") Long sessionId,
+			@Param("brandSizeId") Long brandSizeId);
+
+	List<StockroomInventory> findBySession(InventorySession session);
+
+ 
+	Optional<StockroomInventory> findBySessionAndBrandSize(InventorySession session, BrandSize brandSize);
+ 
+	Optional<StockroomInventory> findBySessionSessionIdAndBrandSizeId(Long sessionId, Long brandSizeId);
+
 }

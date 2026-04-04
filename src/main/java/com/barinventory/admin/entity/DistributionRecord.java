@@ -38,17 +38,17 @@ public class DistributionRecord {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	// ── Inventory Session ─────────────────────────────────────
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "session_id", nullable = false)
-	@JsonIgnore
-	private InventorySession session;
+ 
 
 	@ManyToOne
 	@JoinColumn(name = "brand_size_id", nullable = false)
 	private BrandSize brandSize;
-
-	// ── Stock & Allocation ───────────────────────────────────
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "session_id")
+	private InventorySession session;	// ── Stock & Allocation ───────────────────────────────────
+	
+	
 	@Column(nullable = false, precision = 10, scale = 2)
 	private BigDecimal quantityFromStockroom = BigDecimal.ZERO; // Must match stockroom transferred
 
@@ -70,14 +70,23 @@ public class DistributionRecord {
 	@PrePersist
 	@PreUpdate
 	public void calculateUnallocated() {
-		this.unallocated = this.quantityFromStockroom.subtract(this.totalAllocated);
 
-		if (this.totalAllocated.compareTo(BigDecimal.ZERO) == 0) {
-			this.status = DistributionStatus.PENDING_ALLOCATION; // Nothing allocated
-		} else if (this.unallocated.compareTo(BigDecimal.ZERO) == 0) {
-			this.status = DistributionStatus.ALLOCATED; // Fully allocated
-		} else {
-			this.status = DistributionStatus.PENDING_ALLOCATION; // Partially allocated
-		}
+	    if (this.quantityFromStockroom == null) {
+	        this.quantityFromStockroom = BigDecimal.ZERO;
+	    }
+
+	    if (this.totalAllocated == null) {
+	        this.totalAllocated = BigDecimal.ZERO;
+	    }
+
+	    this.unallocated = this.quantityFromStockroom.subtract(this.totalAllocated);
+
+	    if (this.totalAllocated.compareTo(BigDecimal.ZERO) == 0) {
+	        this.status = DistributionStatus.PENDING_ALLOCATION;
+	    } else if (this.unallocated.compareTo(BigDecimal.ZERO) == 0) {
+	        this.status = DistributionStatus.ALLOCATED;
+	    } else {
+	        this.status = DistributionStatus.PENDING_ALLOCATION;
+	    }
 	}
 }
