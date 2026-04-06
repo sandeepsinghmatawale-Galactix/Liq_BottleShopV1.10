@@ -54,5 +54,10 @@ public interface StockroomInventoryRepository extends JpaRepository<StockroomInv
 	Optional<StockroomInventory> findBySessionAndBrandSize(InventorySession session, BrandSize brandSize);
  
 	Optional<StockroomInventory> findBySessionSessionIdAndBrandSizeId(Long sessionId, Long brandSizeId);
+	
+	List<StockroomInventory> findByBar_BarIdAndOpeningTrue(Long barId);
+
+    void deleteByBar_BarIdAndOpeningTrue(Long barId);
+    
 
 }

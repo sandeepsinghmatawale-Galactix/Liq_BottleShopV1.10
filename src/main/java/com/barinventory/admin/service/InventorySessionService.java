@@ -12,6 +12,7 @@ import com.barinventory.admin.entity.*;
 import com.barinventory.admin.enums.DistributionStatus;
 import com.barinventory.admin.enums.SessionStatus;
 import com.barinventory.admin.repository.*;
+import com.barinventory.brands.entity.BrandSize;
 import com.barinventory.brands.repository.BrandSizeRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -56,7 +57,7 @@ public class InventorySessionService {
 
         InventorySession session = InventorySession.builder()
                 .bar(bar)
-                .status(SessionStatus.SETUP)
+                .status(SessionStatus.IN_PROGRESS)
                 .sessionStartTime(LocalDateTime.now())
                 .build();
 
@@ -309,35 +310,46 @@ public class InventorySessionService {
     @Transactional
     public void saveWellInventoryFromForm(Long sessionId, Map<String, String> formData) {
         InventorySession session = getSession(sessionId);
+
+        wellRepository.deleteBySessionSessionId(sessionId);
+
+        List<BrandSize> brandSizes = getAllActiveBrandSizes();
+        List<BarWell> wells = getWellsByBar(session.getBar().getBarId());
+
         List<WellInventory> wellList = new ArrayList<>();
 
-        // Group form data by wellId
-        Map<Long, Map<String, String>> groupedData = groupFormDataByKey(formData, "well");
+        for (BrandSize brandSize : brandSizes) {
+            for (BarWell well : wells) {
+                String openingKey = "opening_" + brandSize.getId() + "_" + well.getBarWellId();
+                String receivedKey = "received_" + brandSize.getId() + "_" + well.getBarWellId();
+                String closingKey = "closing_" + brandSize.getId() + "_" + well.getBarWellId();
 
-        for (Map.Entry<Long, Map<String, String>> entry : groupedData.entrySet()) {
-            Long wellId = entry.getKey();
-            Map<String, String> data = entry.getValue();
+                BigDecimal opening = parseDecimal(formData.get(openingKey));
+                BigDecimal received = parseDecimal(formData.get(receivedKey));
+                BigDecimal closing = parseDecimal(formData.get(closingKey));
 
-            BarWell well = barWellRepository.findById(wellId)
-                    .orElseThrow(() -> new RuntimeException("Well not found: " + wellId));
+                if (opening.compareTo(BigDecimal.ZERO) == 0
+                        && received.compareTo(BigDecimal.ZERO) == 0
+                        && closing.compareTo(BigDecimal.ZERO) == 0) {
+                    continue;
+                }
 
-            BigDecimal opening = parseDecimal(data.get("opening"));
-            BigDecimal received = parseDecimal(data.get("received"));
-            BigDecimal closing = parseDecimal(data.get("closing"));
+                WellInventory wellInv = WellInventory.builder()
+                        .session(session)
+                        .brandSize(brandSize)
+                        .barWell(well)
+                        .openingStock(opening)
+                        .receivedFromDistribution(received)
+                        .closingStock(closing)
+                        .build();
 
-            WellInventory wellInv = WellInventory.builder()
-                    .session(session)
-                    .barWell(well)   // ✅ CLEAN RELATION
-                    .openingStock(opening)
-                    .receivedFromDistribution(received)
-                    .closingStock(closing)
-                    .build();
-
-            wellList.add(wellInv);
+                wellList.add(wellInv);
+            }
         }
 
         saveWellInventory(sessionId, wellList);
     }
+
 
     /**
      * Save well inventory list
@@ -376,11 +388,7 @@ public class InventorySessionService {
     /**
      * Get all active brand sizes
      */
-    public List<com.barinventory.brands.entity.BrandSize> getAllActiveBrandSizes() {
-        return brandSizeRepository.findAll().stream()
-                .filter(bs -> bs.isActive())
-                .collect(Collectors.toList());
-    }
+   
 
     /**
      * Get all well names for a bar
@@ -394,9 +402,7 @@ public class InventorySessionService {
     /**
      * Get all wells for a bar (with IDs)
      */
-    public List<BarWell> getWellsByBar(Long barId) {
-        return barWellRepository.findByBarBarIdAndActiveTrue(barId);
-    }
+    
 
     /**
      * Get previous session's closing stock for stockroom (reference)
@@ -530,6 +536,161 @@ public class InventorySessionService {
 
         return true;
     }
+    
+    
+    @Transactional
+    public InventorySession createSetupSession(Long barId) {
+        Bar bar = barRepository.findById(barId)
+                .orElseThrow(() -> new RuntimeException("Bar not found: " + barId));
+
+        Optional<InventorySession> existing = sessionRepository
+                .findFirstByBarBarIdAndStatusOrderBySessionStartTimeDesc(barId, SessionStatus.SETUP);
+
+        if (existing.isPresent()) {
+            return sessionRepository.findByIdWithBar(existing.get().getSessionId())
+                    .orElseThrow(() -> new RuntimeException("Session not found"));
+        }
+
+        InventorySession session = InventorySession.builder()
+                .bar(bar)
+                .status(SessionStatus.SETUP)
+                .sessionStartTime(LocalDateTime.now())
+                .build();
+
+        InventorySession saved = sessionRepository.save(session);
+        return sessionRepository.findByIdWithBar(saved.getSessionId())
+                .orElseThrow(() -> new RuntimeException("Session not found after save"));
+    }
+
+    public Optional<InventorySession> getSetupSession(Long barId) {
+        Optional<InventorySession> found = sessionRepository
+                .findFirstByBarBarIdAndStatusOrderBySessionStartTimeDesc(barId, SessionStatus.SETUP);
+
+        return found.flatMap(s -> sessionRepository.findByIdWithBar(s.getSessionId()));
+    }
+
+    
+
+   
+
+    @Transactional
+    public void finalizeSetupSession(Long sessionId) {
+        InventorySession session = getSession(sessionId);
+
+        if (session.getStatus() != SessionStatus.SETUP) {
+            throw new RuntimeException("Not a setup session");
+        }
+
+        session.setStatus(SessionStatus.COMPLETED);
+        session.setSessionEndTime(LocalDateTime.now());
+        sessionRepository.save(session);
+    }
+
+   
+   
+
+    public List<BrandSize> getAllActiveBrandSizes() {
+        return brandSizeRepository.findAll().stream()
+                .filter(BrandSize::isActive)
+                .collect(Collectors.toList());
+    }
+
+    public List<BarWell> getWellsByBar(Long barId) {
+        return barWellRepository.findByBarBarIdAndActiveTrue(barId);
+    }
+
+    @Transactional
+    public void saveSetupStockroom(Long sessionId, Map<String, String> formData) {
+        InventorySession session = sessionRepository.findByIdWithBar(sessionId)
+                .orElseThrow(() -> new RuntimeException("Session not found"));
+
+        if (session.getStatus() != SessionStatus.SETUP) {
+            throw new RuntimeException("Not a setup session");
+        }
+
+        stockroomRepository.deleteBySessionSessionId(sessionId);
+
+        List<BrandSize> brandSizes = getAllActiveBrandSizes();
+
+        for (BrandSize brandSize : brandSizes) {
+            String key = "opening_" + brandSize.getId();
+            BigDecimal openingQty = parseDecimal(formData.get(key));
+
+            if (openingQty.compareTo(BigDecimal.ZERO) > 0) {
+                StockroomInventory si = StockroomInventory.builder()
+                        .session(session)
+                        .brandSize(brandSize)
+                        .openingStock(openingQty)
+                        .receivedStock(BigDecimal.ZERO)
+                        .closingStock(openingQty)
+                        .transferredOut(BigDecimal.ZERO)
+                        .remarks("Admin initial setup")
+                        .build();
+
+                stockroomRepository.save(si);
+            }
+        }
+
+        log.info("Saved setup stockroom for session {}", sessionId);
+    }
+
+    @Transactional
+    public void saveSetupWells(Long sessionId, Map<String, String> formData) {
+        InventorySession session = sessionRepository.findByIdWithBar(sessionId)
+                .orElseThrow(() -> new RuntimeException("Session not found"));
+
+        if (session.getStatus() != SessionStatus.SETUP) {
+            throw new RuntimeException("Not a setup session");
+        }
+
+        wellRepository.deleteBySessionSessionId(sessionId);
+
+        List<BrandSize> brandSizes = getAllActiveBrandSizes();
+        List<BarWell> wells = getWellsByBar(session.getBar().getBarId());
+
+        for (BarWell well : wells) {
+            for (BrandSize brandSize : brandSizes) {
+                String key = "opening_" + brandSize.getId() + "_" + well.getBarWellId();
+                BigDecimal openingQty = parseDecimal(formData.get(key));
+
+                if (openingQty.compareTo(BigDecimal.ZERO) > 0) {
+                    WellInventory wi = WellInventory.builder()
+                            .session(session)
+                            .brandSize(brandSize)
+                            .barWell(well)
+                            .openingStock(openingQty)
+                            .receivedFromDistribution(BigDecimal.ZERO)
+                            .closingStock(openingQty)
+                            .consumed(BigDecimal.ZERO)
+                            .remarks("Admin initial setup")
+                            .build();
+
+                    wellRepository.save(wi);
+                }
+            }
+        }
+
+        log.info("Saved setup wells for session {}", sessionId);
+    }
+
+    public Map<Long, BigDecimal> getSetupStockroomData(Long sessionId) {
+        return stockroomRepository.findBySessionSessionId(sessionId).stream()
+                .collect(Collectors.toMap(
+                        s -> s.getBrandSize().getId(),
+                        StockroomInventory::getClosingStock,
+                        (a, b) -> a
+                ));
+    }
+
+    public Map<String, BigDecimal> getSetupWellsData(Long sessionId) {
+        return wellRepository.findBySessionSessionId(sessionId).stream()
+                .collect(Collectors.toMap(
+                        w -> w.getBrandSize().getId() + "_" + w.getBarWell().getBarWellId(),
+                        WellInventory::getClosingStock,
+                        (a, b) -> a
+                ));
+    }
+
 
     // =========================================================
     // HELPER METHODS
@@ -605,6 +766,68 @@ public class InventorySessionService {
             received.compareTo(BigDecimal.ZERO) < 0 ||
             closing.compareTo(BigDecimal.ZERO) < 0) {
             throw new RuntimeException("Stock values cannot be negative");
+        }
+    }
+    
+    @Transactional
+    public void saveOpeningStock(Long barId, Map<String, String> formData) {
+
+        Bar bar = barRepository.findById(barId)
+                .orElseThrow(() -> new RuntimeException("Bar not found"));
+
+        stockroomRepository.deleteByBar_BarIdAndOpeningTrue(barId);
+
+        for (Map.Entry<String, String> entry : formData.entrySet()) {
+
+            String key = entry.getKey();
+            String value = entry.getValue();
+
+            if (key.startsWith("qty_") && value != null && !value.isBlank()) {
+
+                Long brandSizeId = Long.parseLong(key.replace("qty_", ""));
+                BigDecimal qty = new BigDecimal(value);
+
+                if (qty.compareTo(BigDecimal.ZERO) > 0) {
+
+                    BrandSize brandSize = brandSizeRepository.findById(brandSizeId)
+                            .orElseThrow();
+
+                    StockroomInventory inv = new StockroomInventory();
+
+                    inv.setBar(bar);
+                    inv.setBrandSize(brandSize);   // ✅ FIXED
+                    inv.setOpening(true);
+                    inv.setSession(null);
+
+                    inv.setOpeningStock(qty);
+                    inv.setReceivedStock(BigDecimal.ZERO);
+                    inv.setClosingStock(qty);
+
+                    stockroomRepository.save(inv);
+                }
+            }
+        }
+    }
+    
+    public void preloadOpeningStock(Long sessionId) {
+
+        InventorySession session = getSession(sessionId);
+        Long barId = session.getBar().getBarId();
+
+        List<StockroomInventory> openingStock =
+                stockroomRepository.findByBar_BarIdAndOpeningTrue(barId);
+
+        for (StockroomInventory os : openingStock) {
+
+            StockroomInventory inv = new StockroomInventory();
+
+            inv.setSession(session);     // ✅ now session-based
+            inv.setBrandSize(os.getBrandSize());
+            inv.setOpeningStock(os.getOpeningStock());
+            inv.setReceivedStock(BigDecimal.ZERO);
+            inv.setClosingStock(os.getOpeningStock());
+
+            stockroomRepository.save(inv);
         }
     }
 }

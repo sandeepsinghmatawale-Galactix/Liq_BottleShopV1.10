@@ -1,5 +1,6 @@
 package com.barinventory.customer.controller;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -19,7 +20,9 @@ import com.barinventory.brands.service.BrandService;
 import com.barinventory.customer.dto.CartItemDTO;
 import com.barinventory.customer.dto.ConsumptionLogDTO;
 import com.barinventory.customer.dto.HealthStatsDTO;
+import com.barinventory.customer.entity.ConsumptionLog;
 import com.barinventory.customer.entity.Customer;
+import com.barinventory.customer.entity.CustomerOrder;
 import com.barinventory.customer.service.CustomerService;
 
 import lombok.RequiredArgsConstructor;
@@ -28,7 +31,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/customer")
 @RequiredArgsConstructor
 public class CustomerController {
-
+	
 	private final CustomerService customerService;
 	private final BrandService brandService;
 	
@@ -37,33 +40,30 @@ public class CustomerController {
 		model.addAttribute("customer", customer);
 		return "customer/dashboard";
 	}
-
-
+	
 	@GetMapping({"/explore", "/brands"})
 	public String explore(Model model) {
-	    List<Brand> brands = brandService.getAllActiveBrandsForCustomer();
-
-	    List<String> categories = brands.stream()
-	            .map(Brand::getCategory)
-	            .filter(Objects::nonNull)
-	            .map(Enum::name)
-	            .distinct()
-	            .sorted()
-	            .toList();
-
-	    model.addAttribute("brands", brands);
-	    model.addAttribute("categories", categories);
-	    return "customer/explore";
+		List<Brand> brands = brandService.getAllActiveBrandsForCustomer();
+		List<String> categories = brands.stream()
+				.map(Brand::getCategory)
+				.filter(Objects::nonNull)
+				.map(Enum::name)
+				.distinct()
+				.sorted()
+				.toList();
+		
+		model.addAttribute("brands", brands);
+		model.addAttribute("categories", categories);
+		return "customer/explore";
 	}
-
-
+	
 	@GetMapping("/cart")
 	public String cart(@AuthenticationPrincipal Customer customer, Model model) {
 		List<CartItemDTO> items = customerService.getCart(customer.getId());
 		model.addAttribute("cartItems", items);
 		return "customer/cart";
 	}
-
+	
 	@PostMapping("/cart/add")
 	public String addToCart(@AuthenticationPrincipal Customer customer,
 			@RequestParam Long brandSizeId,
@@ -71,32 +71,48 @@ public class CustomerController {
 		customerService.addToCart(customer.getId(), brandSizeId, quantity);
 		return "redirect:/customer/cart";
 	}
-
+	
 	@PostMapping("/cart/checkout")
 	public String checkout(@AuthenticationPrincipal Customer customer) {
 		customerService.checkout(customer.getId());
 		return "redirect:/customer/orders";
 	}
-
+	
 	@GetMapping("/orders")
 	public String orders(@AuthenticationPrincipal Customer customer, Model model) {
-		model.addAttribute("orders", customerService.getOrderHistory(customer.getId()));
+		// Get orders from service (returns List<CustomerOrder>)
+		List<CustomerOrder> orders = customerService.getOrderHistory(customer.getId());
+		
+		// Calculate stats for the view
+		long completedCount = orders.stream()
+				.filter(order -> order.getStatus() == CustomerOrder.OrderStatus.COMPLETED)
+				.count();
+		
+		BigDecimal totalAmount = orders.stream()
+				.map(CustomerOrder::getTotalAmount)
+				.filter(Objects::nonNull)
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
+		
+		model.addAttribute("orders", orders);
+		model.addAttribute("completedCount", completedCount);
+		model.addAttribute("totalAmount", totalAmount);
+		
 		return "customer/orders";
 	}
-
+	
 	@GetMapping("/health")
 	public String health(@AuthenticationPrincipal Customer customer, Model model) {
 		LocalDateTime end = LocalDateTime.now();
 		LocalDateTime start = end.minusDays(30);
-
+		
 		HealthStatsDTO stats = customerService.getHealthStats(customer.getId(), start, end);
-		var logs = customerService.getConsumptionHistory(customer.getId(), start, end);
-
+		List<ConsumptionLog> logs = customerService.getConsumptionHistory(customer.getId(), start, end);
+		
 		model.addAttribute("stats", stats);
 		model.addAttribute("logs", logs);
 		return "customer/health";
 	}
-
+	
 	@PostMapping({"/api/consumption/log", "/consumption/log"})
 	@ResponseBody
 	public String logConsumption(@AuthenticationPrincipal Customer customer,

@@ -35,6 +35,9 @@ import com.barinventory.admin.service.BrandSizeProductService;
 import com.barinventory.admin.service.InventorySessionService;
 import com.barinventory.admin.service.PricingService;
 import com.barinventory.admin.service.ReportService;
+import java.util.stream.Collectors;
+
+import com.barinventory.brands.entity.BrandSize;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,7 +56,7 @@ public class WebController {
 	private final ReportService reportService;
 	private final UserRepository userRepository;
 	private final BarRepository barRepository;
-    private final BrandSizeProductService  brandSizeProductService;
+	private final BrandSizeProductService brandSizeProductService;
 	private final InventorySessionRepository sessionRepository;
 
 	// =========================================================
@@ -80,47 +83,45 @@ public class WebController {
 	@GetMapping("/dashboard")
 	public String showDashboard(@AuthenticationPrincipal User user, Model model) {
 
-	    if (user == null) {
-	        return "redirect:/login";
-	    }
+		if (user == null) {
+			return "redirect:/login";
+		}
 
-	    model.addAttribute("activePage", "dashboard");
-	    model.addAttribute("user", user);
-	    model.addAttribute("username", user.getName());
-	    model.addAttribute("role", user.getRole());
+		model.addAttribute("activePage", "dashboard");
+		model.addAttribute("user", user);
+		model.addAttribute("username", user.getName());
+		model.addAttribute("role", user.getRole());
 
-	    if (user.getRole() == Role.ADMIN) {
-	        List<Bar> bars = barRepository.findAll();
-	        model.addAttribute("bars", bars);
-	        model.addAttribute("totalBars", bars.size());
-	        model.addAttribute("totalUsers", userRepository.count());
-	        return "dashboard";
-	    }
+		if (user.getRole() == Role.ADMIN) {
+			List<Bar> bars = barRepository.findAll();
+			model.addAttribute("bars", bars);
+			model.addAttribute("totalBars", bars.size());
+			model.addAttribute("totalUsers", userRepository.count());
+			return "dashboard";
+		}
 
-	    Long barId = user.getBarId();
-	    if (barId == null) {
-	        return "redirect:/login?error=no_bar";
-	    }
+		Long barId = user.getBarId();
+		if (barId == null) {
+			return "redirect:/login?error=no_bar";
+		}
 
-	    Bar bar = barRepository.findById(barId)
-	            .orElseThrow(() -> new RuntimeException("Bar not found: " + barId));
+		Bar bar = barRepository.findById(barId).orElseThrow(() -> new RuntimeException("Bar not found: " + barId));
 
-	    List<InventorySession> sessions = sessionService.getSessionsByBar(barId);
+		List<InventorySession> sessions = sessionService.getSessionsByBar(barId);
 
-	    model.addAttribute("bar", bar);
-	    model.addAttribute("barId", barId);
-	    model.addAttribute("sessions", sessions);
-	    model.addAttribute("activeSessionCount",
-	            sessions.stream().filter(s -> s.getStatus() == SessionStatus.IN_PROGRESS).count());
+		model.addAttribute("bar", bar);
+		model.addAttribute("barId", barId);
+		model.addAttribute("sessions", sessions);
+		model.addAttribute("activeSessionCount",
+				sessions.stream().filter(s -> s.getStatus() == SessionStatus.IN_PROGRESS).count());
 
-	    if (user.getRole() == Role.BAR_OWNER) {
-	        long staffCount = userRepository.countUsersByBarAndRole(barId, Role.BAR_STAFF);
-	        model.addAttribute("staffCount", staffCount);
-	    }
+		if (user.getRole() == Role.BAR_OWNER) {
+			long staffCount = userRepository.countUsersByBarAndRole(barId, Role.BAR_STAFF);
+			model.addAttribute("staffCount", staffCount);
+		}
 
-	    return "dashboard";
+		return "dashboard";
 	}
-
 
 	// =========================================================
 	// SESSION MANAGEMENT
@@ -168,18 +169,16 @@ public class WebController {
 	@GetMapping("/sessions/stockroom/{sessionId}")
 	public String stockroom(@PathVariable Long sessionId, Model model) {
 
-	    InventorySession inv = sessionService.getSession(sessionId);
+		InventorySession inv = sessionService.getSession(sessionId);
 
-	    model.addAttribute("inv", inv);
-	    model.addAttribute("products", brandSizeProductService.getAllActiveProducts());
+		model.addAttribute("inv", inv);
+		model.addAttribute("brandSizes", sessionService.getAllActiveBrandSizes());
+		// optional: keep new names too if needed
+		model.addAttribute("session", inv);
+		model.addAttribute("sessionId", sessionId);
 
-	    // optional: keep new names too if needed
-	    model.addAttribute("session", inv);
-	    model.addAttribute("sessionId", sessionId);
-
-	    return "stockroom";
+		return "stockroom";
 	}
-
 
 	@PostMapping("/sessions/stockroom/{sessionId}")
 	@Transactional
@@ -291,7 +290,6 @@ public class WebController {
 
 		// Get pricing map
 		Map<Long, BarProductPrice> prices = pricingService.getPriceMapForBar(bar.getBarId());
-		 
 
 		// Get distribution allocations map
 		Map<Long, BigDecimal> distributionMap = sessionService.getDistributionMapForSession(sessionId);
@@ -401,6 +399,110 @@ public class WebController {
 
 			return "sessions/verify";
 		}
+	}
+
+	// ================= ADMIN BAR SETUP (OPENING STOCK) =================
+
+	@GetMapping("/admin/bars/{barId}/setup")
+	public String showSetupLanding(@PathVariable Long barId, Model model) {
+		model.addAttribute("bar", barService.getBarById(barId));
+		model.addAttribute("setupSession", sessionService.getSetupSession(barId).orElse(null));
+		return "admin/setup-landing";
+	}
+
+	@PostMapping("/admin/bars/{barId}/setup/start")
+	public String startSetup(@PathVariable Long barId) {
+		InventorySession session = sessionService.createSetupSession(barId);
+		return "redirect:/admin/setup/" + session.getSessionId() + "/stockroom";
+	}
+
+	@GetMapping("/admin/setup/{sessionId}/stockroom")
+	public String showSetupStockroom(@PathVariable Long sessionId, Model model) {
+	    InventorySession session = sessionService.getSession(sessionId);
+	    model.addAttribute("session", session);
+	    model.addAttribute("sessionId", sessionId);
+	    model.addAttribute("brandSizes", sessionService.getAllActiveBrandSizes());
+	    model.addAttribute("existingStock", sessionService.getSetupStockroomData(sessionId));
+	    return "admin/setup-stockroom";
+	}
+
+
+	@PostMapping("/admin/setup/{sessionId}/stockroom")
+	public String saveSetupStockroom(@PathVariable Long sessionId,
+	        @RequestParam Map<String, String> formData,
+	        Model model) {
+	    try {
+	        sessionService.saveSetupStockroom(sessionId, formData);
+	        return "redirect:/admin/setup/" + sessionId + "/wells";
+	    } catch (Exception e) {
+	        InventorySession session = sessionService.getSession(sessionId);
+	        model.addAttribute("session", session);
+	        model.addAttribute("sessionId", sessionId);
+	        model.addAttribute("brandSizes", sessionService.getAllActiveBrandSizes());
+	        model.addAttribute("existingStock", sessionService.getSetupStockroomData(sessionId));
+	        model.addAttribute("error", e.getMessage());
+	        return "admin/setup-stockroom";
+	    }
+	}
+
+	@GetMapping("/admin/setup/{sessionId}/wells")
+	public String showSetupWells(@PathVariable Long sessionId, Model model) {
+	    InventorySession session = sessionService.getSession(sessionId);
+	    model.addAttribute("session", session);
+	    model.addAttribute("sessionId", sessionId);
+	    model.addAttribute("brandSizes", sessionService.getAllActiveBrandSizes());
+	    model.addAttribute("wells", sessionService.getWellsByBar(session.getBar().getBarId()));
+	    model.addAttribute("existingStock", sessionService.getSetupWellsData(sessionId));
+	    return "admin/setup-wells";
+	}
+	@PostMapping("/admin/setup/{sessionId}/wells")
+	public String saveSetupWells(@PathVariable Long sessionId,
+	        @RequestParam Map<String, String> formData,
+	        Model model) {
+	    try {
+	        sessionService.saveSetupWells(sessionId, formData);
+	        return "redirect:/admin/setup/" + sessionId + "/confirm";
+	    } catch (Exception e) {
+	        InventorySession session = sessionService.getSession(sessionId);
+	        model.addAttribute("session", session);
+	        model.addAttribute("sessionId", sessionId);
+	        model.addAttribute("brandSizes", sessionService.getAllActiveBrandSizes());
+	        model.addAttribute("wells", sessionService.getWellsByBar(session.getBar().getBarId()));
+	        model.addAttribute("existingStock", sessionService.getSetupWellsData(sessionId));
+	        model.addAttribute("error", e.getMessage());
+	        return "admin/setup-wells";
+	    }
+	}
+
+	@GetMapping("/admin/setup/{sessionId}/confirm")
+	public String showSetupConfirm(@PathVariable Long sessionId, Model model) {
+	    InventorySession session = sessionService.getSession(sessionId);
+	    model.addAttribute("session", session);
+	    model.addAttribute("sessionId", sessionId);
+	    model.addAttribute("stockroomData", sessionService.getSetupStockroomData(sessionId));
+	    model.addAttribute("wellsData", sessionService.getSetupWellsData(sessionId));
+	    model.addAttribute("brandSizes", sessionService.getAllActiveBrandSizes());
+	    model.addAttribute("wells", sessionService.getWellsByBar(session.getBar().getBarId()));
+	    return "admin/setup-confirm";
+	}
+
+	@PostMapping("/admin/setup/{sessionId}/finalize")
+	public String finalizeSetup(@PathVariable Long sessionId) {
+		sessionService.finalizeSetupSession(sessionId);
+		return "redirect:/dashboard?setupComplete=true";
+	}
+
+	private void populateSetupModel(InventorySession session, Model model) {
+		List<BrandSize> brandSizes = sessionService.getAllActiveBrandSizes();
+		List<BarWell> wells = sessionService.getWellsByBar(session.getBar().getBarId());
+
+		model.addAttribute("session", session);
+		model.addAttribute("sessionId", session.getSessionId());
+		model.addAttribute("bar", session.getBar());
+
+		model.addAttribute("brandSizes", brandSizes);
+		model.addAttribute("wells", wells);
+		model.addAttribute("wellNames", wells.stream().map(BarWell::getWellName).collect(Collectors.toList()));
 	}
 
 	// =========================================================

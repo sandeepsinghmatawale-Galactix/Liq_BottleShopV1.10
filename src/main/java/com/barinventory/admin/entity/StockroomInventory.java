@@ -35,11 +35,25 @@ public class StockroomInventory {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	 
+	@ManyToOne(fetch = FetchType.EAGER)
+	@JoinColumn(name = "product_id")
+	private Product product;
 	
 	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "brand_size_id", nullable = false)
 	private BrandSize brandSize;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "bar_id")
+	private Bar bar;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "session_id")
+	@JsonBackReference
+	private InventorySession session;
+
+	@Column(nullable = false)
+	private boolean opening = false;
 
 	@Column(nullable = false, precision = 10, scale = 2)
 	private BigDecimal openingStock = BigDecimal.ZERO; // Previous closing
@@ -55,14 +69,6 @@ public class StockroomInventory {
 
 	@Column(length = 200)
 	private String remarks;
-
-	
-	
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "session_id")
-	@JsonBackReference
-	private InventorySession session;
-
 
 	@PrePersist
 	@PreUpdate

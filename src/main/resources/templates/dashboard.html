@@ -18,12 +18,10 @@
             font-weight: 600;
         }
 
-        .bar-card { transition: all 0.3s ease; border: none; border-radius: 12px; }
+        .bar-card { transition: all 0.3s ease; border-radius: 12px; }
         .bar-card:hover { transform: translateY(-5px); box-shadow: 0 10px 24px rgba(0,0,0,0.15); }
 
         .billing-hero  { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); border-radius: 15px; }
-        .invoice-hero  { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; color: white; }
-
         .admin-panel   { background: linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%); border-radius: 15px; }
         .bar-owner-panel { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); border-radius: 15px; }
 
@@ -32,42 +30,66 @@
         .onboard-pending { border-top: 3px solid #ffc107 !important; }
         .onboard-active  { border-top: 3px solid #198754 !important; }
         .onboard-stock   { border-top: 3px solid #0dcaf0 !important; }
-
-        .pending-pulse { animation: pulse 2s infinite; }
-        @keyframes pulse { 50% { opacity: 0.5; } }
     </style>
 </head>
 
 <body>
 
+<!-- ✅ NAVBAR RESTORED -->
 <nav class="navbar navbar-dark navbar-expand-lg shadow-sm">
     <div class="container-fluid">
         <a class="navbar-brand fw-bold" th:href="@{/dashboard}">
             <i class="bi bi-shop-window"></i> Liquor Inventory
         </a>
 
-        <div class="collapse navbar-collapse">
+        <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav"></button>
+
+        <div id="nav" class="collapse navbar-collapse">
+
             <ul class="navbar-nav me-auto ms-4">
 
                 <li class="nav-item">
                     <a class="nav-link"
                        th:href="@{/dashboard}"
                        th:classappend="${activePage == 'dashboard'} ? ' active'">
-                        Dashboard
+                        <i class="bi bi-speedometer2"></i> Dashboard
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link"
-                       th:href="@{/billing/bills}">
-                        Billing
+                    <a class="nav-link" th:href="@{/billing/bills}">
+                        <i class="bi bi-receipt"></i> Billing
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link"
-                       th:href="@{/invoices}">
-                        Invoices
+                    <a class="nav-link" th:href="@{/invoices}">
+                        <i class="bi bi-file-earmark-text"></i> Invoices
+                    </a>
+                </li>
+
+                <!-- ✅ NEW (KEEP YOUR CUSTOMER FLOW) -->
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/customer/explore}">
+                        <i class="bi bi-search"></i> Explore
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/customer/cart}">
+                        <i class="bi bi-cart"></i> Cart
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/customer/orders}">
+                        <i class="bi bi-bag"></i> Orders
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/customer/health}">
+                        <i class="bi bi-heart"></i> Health
                     </a>
                 </li>
 
@@ -77,35 +99,71 @@
                 <span>
                     <i class="bi bi-person-circle"></i>
                     <span th:text="${username}"></span>
+                    <span class="badge bg-light text-dark"
+                          th:text="${role != null ? role.name() : ''}"></span>
                 </span>
 
                 <form th:action="@{/logout}" method="post">
                     <button class="btn btn-outline-light btn-sm">Logout</button>
                 </form>
             </div>
+
         </div>
     </div>
 </nav>
 
 <div class="container mt-4">
 
-    <!-- ADMIN -->
+    <!-- ✅ WELCOME -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <h4>
+                Welcome, <span th:text="${username}"></span>
+            </h4>
+            <p class="text-muted">
+                Role: <span th:text="${role != null ? role.name() : ''}"></span>
+            </p>
+        </div>
+    </div>
+
+    <!-- ✅ BILLING HERO (RESTORED) -->
+    <div class="card billing-hero mb-4 shadow-sm">
+        <div class="card-body d-flex justify-content-between">
+            <div>
+                <h5>Billing Module</h5>
+                <p class="small">Create & manage bills</p>
+            </div>
+            <div>
+                <a th:href="@{/billing/bills/new}" class="btn btn-dark btn-sm">Create Bill</a>
+                <a th:href="@{/billing/bills}" class="btn btn-outline-dark btn-sm">View Bills</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ ADMIN VIEW -->
     <div th:if="${role != null and role.name() == 'ADMIN'}">
+
+        <div class="card admin-panel mb-4 shadow-sm">
+            <div class="card-body">
+                <h5>Admin Controls</h5>
+                <a th:href="@{/admin/brands}" class="btn btn-dark btn-sm">Brands</a>
+                 
+            </div>
+        </div>
 
         <div class="row g-3">
 
             <div class="col-md-4" th:each="bar : ${bars}">
+
                 <div class="card bar-card shadow-sm h-100"
-                     th:classappend="${bar.statusClass}">
+                     th:classappend="${bar.active == null or !bar.active} ? 'onboard-pending' : 'onboard-active'">
 
                     <div class="card-body d-flex flex-column">
 
-                        <!-- ✅ NULL SAFE -->
-                        <h6 th:text="${bar != null ? bar.barName : 'N/A'}"></h6>
+                        <h6 th:text="${bar.barName}"></h6>
 
                         <p class="text-muted small"
-                           th:text="${bar != null ? bar.location : ''}">
-                        </p>
+                           th:text="${bar.location}"></p>
 
                         <span class="badge"
                               th:classappend="${bar.active} ? 'bg-success' : 'bg-warning text-dark'"
@@ -114,15 +172,14 @@
 
                         <div class="mt-auto d-flex flex-column gap-2 mt-3">
 
-                            
-							 
-							<a th:href="@{/admin/bars/{barId}/setup(barId=${bar.barId})}"
-							   class="btn btn-warning">
-							    Continue Setup
-							</a>
+                            <!-- FIXED URL -->
+                            <a th:href="@{/admin/bars/{id}/setup(id=${bar.barId})}"
+                               class="btn btn-warning btn-sm">
+                                Continue Setup
+                            </a>
 
-                            <a th:if="${bar.active != null and bar.active}"
-                               th:href="@{/sessions/bar/{barId}(barId=${bar.barId})}"
+                            <a th:if="${bar.active}"
+                               th:href="@{/sessions/{id}(id=${bar.barId})}"
                                class="btn btn-primary btn-sm">
                                 View Sessions
                             </a>
@@ -135,6 +192,7 @@
                         </div>
                     </div>
                 </div>
+
             </div>
 
         </div>

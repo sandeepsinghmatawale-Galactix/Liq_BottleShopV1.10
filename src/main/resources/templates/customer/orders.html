@@ -176,22 +176,22 @@
             font-size: 0.9rem;
         }
         
-        .status-draft {
+        .status-DRAFT {
             background: #e0e0e0;
             color: #666;
         }
         
-        .status-confirmed {
+        .status-CONFIRMED {
             background: #d4edda;
             color: #155724;
         }
         
-        .status-completed {
+        .status-COMPLETED {
             background: #cce5ff;
             color: #004085;
         }
         
-        .status-cancelled {
+        .status-CANCELLED {
             background: #f8d7da;
             color: #721c24;
         }
@@ -425,6 +425,7 @@
 
         <!-- Stats Cards -->
         <div class="stats-cards">
+            <!-- Total Orders -->
             <div class="stat-card">
                 <div class="stat-icon total">
                     <i class="fas fa-shopping-bag"></i>
@@ -432,19 +433,140 @@
                 <div class="stat-value" th:text="${orders.size()}">0</div>
                 <div class="stat-label">Total Orders</div>
             </div>
-            
+
+            <!-- Completed Orders -->
             <div class="stat-card">
                 <div class="stat-icon completed">
                     <i class="fas fa-check-circle"></i>
                 </div>
-                <div class="stat-value" th:text="${#lists.size(orders.?[status.name() == 'COMPLETED'])}">0</div>
+                <div class="stat-value" th:text="${completedCount}">0</div>
                 <div class="stat-label">Completed Orders</div>
             </div>
-            
+
+            <!-- Total Amount -->
             <div class="stat-card">
                 <div class="stat-icon amount">
                     <i class="fas fa-rupee-sign"></i>
                 </div>
                 <div class="stat-value">
-                    ₹<span th:text="${#numbers.formatDecimal(#aggregates.sum(orders.?[sta
-						
+                    ₹<span th:text="${#numbers.formatDecimal(totalAmount, 1, 2)}">0.00</span>
+                </div>
+                <div class="stat-label">Total Spent</div>
+            </div>
+        </div>
+
+        <!-- Orders Container -->
+        <div class="orders-container">
+            <!-- Filter Tabs (Optional) -->
+            <div class="filter-tabs">
+                <div class="filter-tab active" onclick="filterOrders('all')">All Orders</div>
+                <div class="filter-tab" onclick="filterOrders('CONFIRMED')">Confirmed</div>
+                <div class="filter-tab" onclick="filterOrders('COMPLETED')">Completed</div>
+                <div class="filter-tab" onclick="filterOrders('CANCELLED')">Cancelled</div>
+            </div>
+
+            <!-- Orders List -->
+            <div th:if="${orders.isEmpty()}" class="empty-orders">
+                <i class="fas fa-shopping-bag"></i>
+                <h3>No Orders Yet</h3>
+                <p>You haven't placed any orders. Start exploring our collection!</p>
+                <a href="/customer/explore" class="btn-shop">
+                    <i class="fas fa-search"></i> Start Shopping
+                </a>
+            </div>
+
+            <div th:unless="${orders.isEmpty()}">
+                <div th:each="order : ${orders}" class="order-card" th:data-status="${order.status}">
+                    <!-- Order Header -->
+                    <div class="order-header">
+                        <div>
+                            <div class="order-id">Order #<span th:text="${order.id}">1234</span></div>
+                            <div class="order-date" th:text="${#temporals.format(order.orderDate, 'dd MMM yyyy, hh:mm a')}">
+                                01 Jan 2024, 10:30 AM
+                            </div>
+                        </div>
+                        <div>
+                            <span class="order-status" 
+                                  th:classappend="${'status-' + order.status}"
+                                  th:text="${order.status}">
+                                CONFIRMED
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Order Items -->
+                    <div class="order-items">
+                        <div th:each="item : ${order.items}" class="order-item">
+                            <div class="item-icon">
+                                <i class="fas fa-wine-bottle"></i>
+                            </div>
+                            <div class="item-info">
+                                <h6 th:text="${item.brandName}">Brand Name</h6>
+                                <div class="item-meta">
+                                    <span th:text="${item.sizeLabel}">750ml</span> • 
+                                    <span th:text="${item.volumeMl + 'ml'}">750ml</span>
+                                    <span th:if="${item.abvPercent != null}"> • <span th:text="${item.abvPercent + '%'}">40%</span> ABV</span>
+                                </div>
+                            </div>
+                            <div class="item-price">
+                                <div class="item-qty">
+                                    Qty: <span th:text="${item.quantity}">1</span>
+                                </div>
+                                <div class="item-total">
+                                    ₹<span th:text="${#numbers.formatDecimal(item.price * item.quantity, 1, 2)}">0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Footer -->
+                    <div class="order-footer">
+                        <div class="order-total">
+                            Total: <span class="amount">₹<span th:text="${#numbers.formatDecimal(order.totalAmount, 1, 2)}">0.00</span></span>
+                        </div>
+                        <div>
+                            <a th:href="@{/customer/orders/{id}(id=${order.id})}" class="btn-action btn-view">
+                                <i class="fas fa-eye"></i> View Details
+                            </a>
+                            <a th:if="${order.status.name() == 'COMPLETED'}" 
+                               href="#" 
+                               class="btn-action btn-reorder"
+                               th:onclick="|reorder(${order.id})|">
+                                <i class="fas fa-redo"></i> Reorder
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function filterOrders(status) {
+            const cards = document.querySelectorAll('.order-card');
+            const tabs = document.querySelectorAll('.filter-tab');
+            
+            // Update active tab
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Filter orders
+            cards.forEach(card => {
+                if (status === 'all' || card.dataset.status === status) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+        
+        function reorder(orderId) {
+            if (confirm('Do you want to reorder this order?')) {
+                // Implement reorder logic here
+                window.location.href = '/customer/orders/' + orderId + '/reorder';
+            }
+        }
+    </script>
+</body>
+</html>
