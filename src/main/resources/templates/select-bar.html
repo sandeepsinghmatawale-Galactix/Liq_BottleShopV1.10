@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -10,7 +10,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
 
     <style>
-        /* Reset & Body */
         * { box-sizing: border-box; }
         body {
             min-height: 100vh;
@@ -22,7 +21,6 @@
             padding: 2rem 1rem;
         }
 
-        /* Wrapper & Card */
         .wrapper { width: 100%; max-width: 760px; }
         .card-wrapper {
             background: white;
@@ -31,131 +29,129 @@
             box-shadow: 0 20px 60px rgba(0,0,0,0.18);
         }
 
-        /* Top Logo */
         .top-logo { text-align: center; margin-bottom: 2rem; color: white; }
-        .top-logo i { font-size: 2.4rem; opacity: 0.95; }
-        .top-logo h2 { font-weight: 700; font-size: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.25rem; }
-        .top-logo p { font-size: 0.92rem; opacity: 0.85; margin: 0; }
+        .top-logo i { font-size: 2.4rem; }
+        .top-logo h2 { font-weight: 700; font-size: 1.5rem; margin-top: 0.5rem; }
+        .top-logo p { font-size: 0.92rem; }
 
-        /* User Row */
         .user-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; }
         .user-avatar {
             width: 40px; height: 40px;
             border-radius: 50%;
             background: linear-gradient(135deg, #a18cd1, #764ba2);
             display: flex; align-items: center; justify-content: center;
-            color: white; font-weight: 700; font-size: 1rem; flex-shrink: 0;
+            color: white; font-weight: 700;
         }
-        .user-name { font-weight: 600; font-size: 0.95rem; color: #1e0b3b; line-height: 1.2; }
+        .user-name { font-weight: 600; font-size: 0.95rem; }
         .user-role { font-size: 0.78rem; color: #9c8ec1; }
-        .logout-link { margin-left: auto; font-size: 0.8rem; color: #c0a0e0; text-decoration: none; display: flex; align-items: center; gap: 4px; }
-        .logout-link:hover { color: #764ba2; }
+        .logout-link { margin-left: auto; font-size: 0.8rem; text-decoration: none; }
 
-        /* Section & Grid */
-        .section-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9c8ec1; margin-bottom: 1.1rem; }
+        .section-label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; margin-bottom: 1.1rem; }
         .bar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
 
-        /* Bar Card */
         .bar-card {
             border: 1.5px solid #e8e0f5;
             border-radius: 14px;
-            padding: 1.25rem 1.1rem;
+            padding: 1.25rem;
             cursor: pointer;
-            text-decoration: none;
-            color: inherit;
-            transition: border-color 0.18s, background 0.18s, transform 0.15s;
-            display: flex;
-            flex-direction: column;
-            gap: 0.6rem;
+            transition: 0.2s;
             background: #fdfbff;
-            position: relative;
+            text-align: left;
         }
-        .bar-card:hover { border-color: #764ba2; background: #f5eeff; transform: translateY(-2px); }
-        .bar-card.active-bar { border-color: #764ba2; background: #f0e8ff; }
+        .bar-card:hover { border-color: #764ba2; background: #f5eeff; }
 
         .bar-icon {
             width: 42px; height: 42px;
             border-radius: 10px;
             background: linear-gradient(135deg, #a18cd1, #764ba2);
-            display: flex; align-items: center; justify-content: center; color: white; font-size: 1.1rem;
+            display: flex; align-items: center; justify-content: center; color: white;
         }
-        .bar-name { font-weight: 700; font-size: 0.97rem; color: #1e0b3b; line-height: 1.3; }
-        .bar-city { font-size: 0.8rem; color: #8a6faa; display: flex; align-items: center; gap: 4px; }
-        .bar-type-badge { display: inline-block; font-size: 0.7rem; font-weight: 600; padding: 2px 9px; border-radius: 20px; background: #ede5f9; color: #5a2d91; width: fit-content; }
-        .active-pill { position: absolute; top: 10px; right: 10px; font-size: 0.68rem; font-weight: 700; background: #e8f8f0; color: #1a7a4a; border: 1px solid #b8ecd4; padding: 2px 8px; border-radius: 20px; }
 
-        .divider { border: none; border-top: 1.5px solid #f0e8ff; margin: 1.6rem 0; }
-        .no-bars { text-align: center; padding: 2rem 1rem; color: #b0a0c8; }
-        .no-bars i { font-size: 2rem; margin-bottom: 0.75rem; display: block; }
+        .no-bars { text-align: center; padding: 2rem; color: #b0a0c8; }
     </style>
 </head>
+
 <body>
 
 <div class="wrapper">
 
-    <!-- Top Logo -->
+    <!-- Logo -->
     <div class="top-logo">
         <i class="bi bi-shop-window"></i>
         <h2>Liquor Inventory</h2>
         <p>Select a bar location to continue</p>
     </div>
 
-    <!-- Main Card -->
     <div class="card-wrapper">
 
-        <!-- User Row -->
+        <!-- USER INFO -->
         <div class="user-row">
+
+            <!-- SAFE AVATAR -->
             <div class="user-avatar"
-                 th:text="${#strings.toUpperCase(#strings.substring(currentUser.name, 0, 1))}">A</div>
-            <div>
-                <div class="user-name" th:text="${currentUser.name}">Bar Owner</div>
-                <div class="user-role" th:text="${currentUser.role}">BAR_OWNER</div>
+                 th:text="${currentUser != null and currentUser.name != null and !currentUser.name.isEmpty() 
+                 ? #strings.toUpperCase(#strings.substring(currentUser.name, 0, 1)) 
+                 : 'U'}">
             </div>
+
+            <div>
+                <!-- SAFE NAME -->
+                <div class="user-name"
+                     th:text="${currentUser != null and currentUser.name != null ? currentUser.name : 'User'}">
+                </div>
+
+                <!-- SAFE ROLE -->
+                <div class="user-role"
+                     th:text="${currentUser != null and currentUser.role != null ? currentUser.role : ''}">
+                </div>
+            </div>
+
             <a href="/logout" class="logout-link">
                 <i class="bi bi-box-arrow-right"></i> Logout
             </a>
         </div>
 
-        <hr class="divider">
+        <hr>
 
-        <!-- Bar Section Label -->
-        <div class="section-label">
-            <i class="bi bi-geo-alt-fill me-1"></i>Your bar locations
-        </div>
+        <!-- ALERTS -->
+        <div class="alert alert-danger" th:if="${barError != null}" th:text="${barError}"></div>
+        <div class="alert alert-success" th:if="${barSuccess != null}" th:text="${barSuccess}"></div>
 
-        <!-- No bars fallback -->
+        <!-- LABEL -->
+        <div class="section-label">Your bar locations</div>
+
+        <!-- NO BARS -->
         <div class="no-bars" th:if="${#lists.isEmpty(bars)}">
-            <i class="bi bi-exclamation-circle"></i>
-            <p>No bar locations assigned to your account.<br>
-               Please contact your administrator.</p>
+            No bars assigned. Contact admin.
         </div>
 
-        <!-- Bar Cards Grid -->
+        <!-- BAR LIST -->
         <div class="bar-grid" th:if="${not #lists.isEmpty(bars)}">
-            <a th:each="bar : ${bars}"
-               th:href="@{/select-bar/activate/{id}(id=${bar.barId})}"
-               class="bar-card"
-               th:classappend="${bar.barId == activeBarId} ? 'active-bar' : ''">
 
-                <span class="active-pill" th:if="${bar.barId == activeBarId}">Active</span>
+            <!-- ✅ POST FORM PER BAR -->
+            <form th:each="bar : ${bars}" th:action="@{/select-bar}" method="post">
 
-                <div class="bar-icon"><i class="bi bi-shop"></i></div>
-                <div class="bar-name" th:text="${bar.barName}">Bar Name</div>
-                <div class="bar-city" th:if="${bar.city != null and !bar.city.isEmpty()}">
-                    <i class="bi bi-geo-alt" style="font-size:11px;"></i>
-                    <span th:text="${bar.city}">City</span>
-                </div>
-                <div class="bar-type-badge" th:if="${bar.barType != null}" th:text="${#strings.replace(bar.barType,'_',' ')}">Type</div>
+                <input type="hidden" name="barId" th:value="${bar.barId}" />
 
-            </a>
+                <button type="submit" class="bar-card">
+
+                    <div class="bar-icon">
+                        <i class="bi bi-shop"></i>
+                    </div>
+
+                    <div>
+                        <strong th:text="${bar.barName}">Bar Name</strong>
+                    </div>
+
+                    <div th:if="${bar.city != null}">
+                        <small th:text="${bar.city}"></small>
+                    </div>
+
+                </button>
+
+            </form>
+
         </div>
-
-        <hr class="divider" th:if="${not #lists.isEmpty(bars)}">
-
-        <p class="text-center mb-0" style="font-size:0.8rem; color:#b0a0c8;" th:if="${not #lists.isEmpty(bars)}">
-            <i class="bi bi-info-circle me-1"></i>
-            You can switch locations anytime from the navbar.
-        </p>
 
     </div>
 </div>

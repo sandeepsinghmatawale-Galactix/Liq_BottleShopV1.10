@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.barinventory.admin.enums.BarSubscriptionStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -84,6 +85,30 @@ public class Bar {
     @Builder.Default
     private String onboardingStep = "BASIC_INFO"; // tracks wizard progress
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    @Builder.Default
+    private BarSubscriptionStatus subscriptionStatus = BarSubscriptionStatus.TRIAL;
+
+    private LocalDate subscriptionStartDate;
+
+    private LocalDate subscriptionEndDate;
+
+    @Builder.Default
+    private Integer freeLoginLimit = 0;
+
+    @Builder.Default
+    private Integer freeLoginUsed = 0;
+
+    @Builder.Default
+    private Boolean adminBlocked = false;
+
+    @Builder.Default
+    private Boolean hiddenOnPlatform = false;
+
+    @Column(length = 255)
+    private String subscriptionNotes;
+
     // ── RELATIONSHIPS ────────────────────────────────────────
     @OneToMany(mappedBy = "bar", cascade = CascadeType.ALL)
     @JsonIgnore
@@ -116,5 +141,35 @@ public class Bar {
         }
 
         return "onboard-stock";
+    }
+
+    public BarSubscriptionStatus getSubscriptionStatus() {
+        return subscriptionStatus == null ? BarSubscriptionStatus.TRIAL : subscriptionStatus;
+    }
+
+    public Integer getFreeLoginLimit() {
+        return freeLoginLimit == null ? 0 : freeLoginLimit;
+    }
+
+    public Integer getFreeLoginUsed() {
+        return freeLoginUsed == null ? 0 : freeLoginUsed;
+    }
+
+    public Boolean getAdminBlocked() {
+        return adminBlocked != null && adminBlocked;
+    }
+
+    public Boolean getHiddenOnPlatform() {
+        return hiddenOnPlatform != null && hiddenOnPlatform;
+    }
+
+    public int getRemainingFreeLogins() {
+        int limit = getFreeLoginLimit();
+        int used = getFreeLoginUsed();
+        return Math.max(0, limit - used);
+    }
+
+    public boolean hasRemainingFreeLogins() {
+        return getRemainingFreeLogins() > 0;
     }
 }

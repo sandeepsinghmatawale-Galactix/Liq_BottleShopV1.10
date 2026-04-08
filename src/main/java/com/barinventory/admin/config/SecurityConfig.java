@@ -67,6 +67,7 @@ public class SecurityConfig {
 
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers("/customer/login", "/customer/register").permitAll()
+						.requestMatchers("/select-bar").authenticated()
 						.requestMatchers("/customer/api/**").hasRole("CUSTOMER")
 						.requestMatchers("/customer/**").hasRole("CUSTOMER")
 						.anyRequest().authenticated())
@@ -119,28 +120,30 @@ public class SecurityConfig {
 				// AUTHORIZATION RULES
 				// =================================================================================
 				.authorizeHttpRequests(auth -> auth
-						// ✅ Static resources
-						.requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
 
-						// ✅ Public pages
-						.requestMatchers("/login", "/error", "/").permitAll().requestMatchers("/invoices/**")
-						.permitAll()
+					    // ✅ Static
+					    .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
 
-						// ✅ IMPORTANT: Allow select-bar flow
-						.requestMatchers("/select-bar", "/switch-bar/**").authenticated()
+					    // ✅ Public
+					    .requestMatchers("/login", "/error").permitAll()
 
-						// ✅ Dashboard (requires login + bar selection handled in controller)
-						.requestMatchers("/dashboard").authenticated()
+					    // ✅ Bar selection (required after login)
+					    .requestMatchers("/select-bar", "/select-bar/**").authenticated()
 
-						// ✅ Admin only (GLOBAL role)
-						.requestMatchers("/admin/**").hasRole("ADMIN")
+					    // ❌ Block old dashboard completely
+					    .requestMatchers("/dashboard").authenticated()
 
-						// ✅ Bar-related modules (controlled via JOIN table logic)
-						.requestMatchers("/bars/**", "/sessions/**", "/stockroom/**", "/inventory/**", "/api/**")
-						.authenticated()
+					    // ✅ Segregated dashboards
+					    .requestMatchers("/admin/**").hasRole("ADMIN")     // GLOBAL ADMIN
+					    .requestMatchers("/owner/**").hasAnyRole("BAR_OWNER")
+					    .requestMatchers("/staff/**").hasAnyRole("BAR_STAFF")
 
-						// ✅ Everything else
-						.anyRequest().authenticated())
+					    // ✅ Business modules (require login + bar context)
+					    .requestMatchers("/bars/**", "/sessions/**", "/stockroom/**", "/inventory/**", "/api/**")
+					    .authenticated()
+
+					    .anyRequest().authenticated()
+					)
 
 				// =================================================================================
 				// LOGIN CONFIG
@@ -155,8 +158,8 @@ public class SecurityConfig {
 
 							// 👉 If system ADMIN → go directly
 							if (user.getRole().name().equals("ADMIN")) {
-								response.sendRedirect("/dashboard");
-								return;
+							    response.sendRedirect("/admin/dashboard");
+							    return;
 							}
 
 							// 👉 Otherwise → select bar

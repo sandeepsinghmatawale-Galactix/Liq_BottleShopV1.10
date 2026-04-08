@@ -24,6 +24,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // ✅ Find all active users
     List<User> findByActiveTrue();
+  
+  
+    @Query("""
+    	    SELECT u FROM User u
+    	    LEFT JOIN FETCH u.barAccesses uba
+    	    LEFT JOIN FETCH uba.bar
+    	    WHERE u.email = :email
+    	""")
+    	Optional<User> findByEmailWithBars(@Param("email") String email);
 
     // =========================
     // Bar access-related queries

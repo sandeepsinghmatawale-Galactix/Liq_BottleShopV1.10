@@ -34,7 +34,7 @@ public class UserBarAccess {
     @JoinColumn(name = "bar_id", nullable = false)
     private Bar bar;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
@@ -42,7 +42,7 @@ public class UserBarAccess {
     @Column(nullable = false)
     private Role barRole;   // BAR_OWNER, BAR_STAFF — role within THIS bar
 
-    @Column(nullable = false)
+    @Column(name = "active",nullable=false)
     @Builder.Default
     private boolean active = true;
 }
