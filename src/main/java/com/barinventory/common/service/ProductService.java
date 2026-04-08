@@ -1,4 +1,4 @@
-package com.barinventory.admin.service;
+package com.barinventory.common.service;
 
 import com.barinventory.admin.entity.Product;
 import com.barinventory.admin.repository.ProductRepository;

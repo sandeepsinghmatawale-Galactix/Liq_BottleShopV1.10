@@ -1,4 +1,4 @@
-package com.barinventory.admin.service;
+package com.barinventory.common.service;
 
 import java.time.LocalDate;
 import java.util.Collections;

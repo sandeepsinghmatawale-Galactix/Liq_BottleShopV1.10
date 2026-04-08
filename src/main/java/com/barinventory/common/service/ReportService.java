@@ -1,4 +1,4 @@
-package com.barinventory.admin.service;
+package com.barinventory.common.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

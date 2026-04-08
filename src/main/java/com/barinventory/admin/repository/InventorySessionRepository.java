@@ -15,36 +15,36 @@ import com.barinventory.admin.enums.SessionStatus;
 @Repository
 public interface InventorySessionRepository extends JpaRepository<InventorySession, Long> {
 
-	List<InventorySession> findByBarBarIdOrderBySessionStartTimeDesc(Long barId);
-
-	List<InventorySession> findByBarBarIdAndStatus(Long barId, SessionStatus status);
-
-	Optional<InventorySession> findFirstByBarBarIdAndStatusOrderBySessionStartTimeDesc(Long barId,
-			SessionStatus status);
-
-	@Query("SELECT s FROM InventorySession s WHERE s.bar.barId = :barId "
-			+ "AND s.sessionStartTime BETWEEN :startDate AND :endDate " + "ORDER BY s.sessionStartTime DESC")
-	List<InventorySession> findSessionsByBarAndDateRange(@Param("barId") Long barId,
-			@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
-
-	@Query("SELECT s FROM InventorySession s WHERE s.status = :status " + "ORDER BY s.sessionStartTime DESC")
-	List<InventorySession> findByStatus(@Param("status") SessionStatus status);
-
-	Optional<InventorySession> findBySessionId(Long sessionId);
-
-	@Query("SELECT s FROM InventorySession s JOIN FETCH s.bar WHERE s.id = :sessionId")
-	Optional<InventorySession> findByIdWithBar(@Param("sessionId") Long sessionId);
-
-	// FIXED — includes COMPLETED setup sessions so pre-fill works
-	@Query("SELECT s FROM InventorySession s " + "WHERE s.bar.barId = :barId "
-			+ "AND s.status IN (com.barinventory.admin.enums.SessionStatus.COMPLETED, "
-			+ "com.barinventory.admin.enums.SessionStatus.SETUP) " + "ORDER BY s.sessionEndTime DESC")
-	List<InventorySession> findCompletedSessionsByBar(@Param("barId") Long barId);
-	
-//	Optional<InventorySession> findTopByBar_BarIdOrderBySessionDateDesc(Long barId);
-	
-	Optional<InventorySession> findTopByBar_BarIdOrderBySessionStartTimeDesc(Long barId);
-	
-	Optional<InventorySession> findTopByBarBarIdOrderBySessionStartTimeDesc(Long barId);
+	 // Existing methods
+    List<InventorySession> findByBarBarIdOrderBySessionStartTimeDesc(Long barId);
+    List<InventorySession> findByBarBarIdAndStatus(Long barId, SessionStatus status);
+    Optional<InventorySession> findFirstByBarBarIdAndStatusOrderBySessionStartTimeDesc(Long barId, SessionStatus status);
+    Optional<InventorySession> findBySessionId(Long sessionId);
+    Optional<InventorySession> findTopByBar_BarIdOrderBySessionStartTimeDesc(Long barId);
+    Optional<InventorySession> findTopByBarBarIdOrderBySessionStartTimeDesc(Long barId);
+    
+    // ✅ ADD THIS NEW METHOD
+    List<InventorySession> findByBar_BarIdOrderBySessionStartTimeDesc(Long barId);
+    
+    // Query methods
+    @Query("SELECT s FROM InventorySession s WHERE s.bar.barId = :barId "
+            + "AND s.sessionStartTime BETWEEN :startDate AND :endDate "
+            + "ORDER BY s.sessionStartTime DESC")
+    List<InventorySession> findSessionsByBarAndDateRange(@Param("barId") Long barId,
+            @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+ 
+    @Query("SELECT s FROM InventorySession s WHERE s.status = :status "
+            + "ORDER BY s.sessionStartTime DESC")
+    List<InventorySession> findByStatus(@Param("status") SessionStatus status);
+ 
+    @Query("SELECT s FROM InventorySession s JOIN FETCH s.bar WHERE s.id = :sessionId")
+    Optional<InventorySession> findByIdWithBar(@Param("sessionId") Long sessionId);
+ 
+    @Query("SELECT s FROM InventorySession s "
+            + "WHERE s.bar.barId = :barId "
+            + "AND s.status IN (com.barinventory.admin.enums.SessionStatus.COMPLETED, "
+            + "com.barinventory.admin.enums.SessionStatus.SETUP) "
+            + "ORDER BY s.sessionEndTime DESC")
+    List<InventorySession> findCompletedSessionsByBar(@Param("barId") Long barId);
 
 }

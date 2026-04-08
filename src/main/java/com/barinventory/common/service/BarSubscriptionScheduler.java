@@ -1,4 +1,4 @@
-package com.barinventory.admin.service;
+package com.barinventory.common.service;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;

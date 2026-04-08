@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Reports</title>
+
+    <link rel="stylesheet"
+     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-light">
+
+<div class="container mt-4">
+
+    <h3 class="mb-4">📊 Sales Reports</h3>
+
+    <!-- FILTER -->
+    <div class="card p-3 mb-3 shadow-sm">
+
+        <div class="row">
+
+            <div class="col-md-2">
+                <select id="type" class="form-select">
+                    <option value="DAILY">Daily</option>
+                    <option value="WEEKLY">Weekly</option>
+                    <option value="MONTHLY">Monthly</option>
+                    <option value="QUARTERLY">Quarterly</option>
+                    <option value="YEARLY">Yearly</option>
+                    <option value="CUSTOM">Custom</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <input type="date" id="date" class="form-control">
+            </div>
+
+            <div class="col-md-2">
+                <input type="number" id="month" placeholder="Month" class="form-control">
+            </div>
+
+            <div class="col-md-2">
+                <input type="number" id="year" placeholder="Year" class="form-control">
+            </div>
+
+            <div class="col-md-2">
+                <input type="date" id="startDate" class="form-control">
+            </div>
+
+            <div class="col-md-2">
+                <input type="date" id="endDate" class="form-control">
+            </div>
+
+        </div>
+
+        <button class="btn btn-primary mt-3" onclick="loadReport()">Generate</button>
+
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="row text-center mb-3">
+        <div class="col-md-4">
+            <div class="card p-3 shadow-sm">
+                <h6>Total Revenue</h6>
+                <h4 id="revenue">0</h4>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3 shadow-sm">
+                <h6>Total Cost</h6>
+                <h4 id="cost">0</h4>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3 shadow-sm">
+                <h6>Profit</h6>
+                <h4 id="profit">0</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card shadow-sm">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Brand</th>
+                    <th>Qty</th>
+                    <th>Revenue</th>
+                    <th>Profit</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+    <!-- CHART -->
+    <canvas id="chart" class="mt-4"></canvas>
+
+</div>
+
+<script>
+
+function loadReport() {
+
+    const barId = [[${barId}]];
+
+    const payload = {
+        type: document.getElementById("type").value,
+        date: document.getElementById("date").value,
+        month: document.getElementById("month").value,
+        year: document.getElementById("year").value,
+        startDate: document.getElementById("startDate").value,
+        endDate: document.getElementById("endDate").value
+    };
+
+    fetch(`/reports/${barId}/filter`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        document.getElementById("revenue").innerText = data.totalRevenue || 0;
+        document.getElementById("cost").innerText = data.totalCost || 0;
+        document.getElementById("profit").innerText = data.totalProfit || data.profit || 0;
+
+        let rows = "";
+        let labels = [];
+        let values = [];
+
+        data.salesRecords.forEach(s => {
+
+            const name = s.brandSize.brand.brandName + " " + s.brandSize.sizeLabel;
+
+            rows += `
+                <tr>
+                    <td>${name}</td>
+                    <td>${s.quantitySold}</td>
+                    <td>${s.totalRevenue}</td>
+                    <td>${s.profit}</td>
+                </tr>
+            `;
+
+            labels.push(name);
+            values.push(s.totalRevenue);
+        });
+
+        document.getElementById("tableBody").innerHTML = rows;
+
+        renderChart(labels, values);
+
+    });
+}
+
+function renderChart(labels, values) {
+
+    new Chart(document.getElementById("chart"), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Revenue',
+                data: values
+            }]
+        }
+    });
+}
+
+</script>
+
+</body>
+</html>

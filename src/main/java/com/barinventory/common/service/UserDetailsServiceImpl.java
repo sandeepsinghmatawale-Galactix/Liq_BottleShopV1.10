@@ -1,4 +1,4 @@
-package com.barinventory.admin.service;
+package com.barinventory.common.service;
 
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
