@@ -52,7 +52,7 @@ public class OwnerSessionController extends BaseBarController {
 			return "owner/sessions/stockroom";
 		} catch (Exception ex) {
 			redirectAttributes.addFlashAttribute("error", ex.getMessage());
-			return "redirect:/owner/dashboard";
+			return "redirect:/owner/owner-dashboard";
 		}
 	}
 
@@ -85,7 +85,7 @@ public class OwnerSessionController extends BaseBarController {
 			return "owner/sessions/distribution";
 		} catch (Exception ex) {
 			redirectAttributes.addFlashAttribute("error", ex.getMessage());
-			return "redirect:/owner/dashboard";
+			return "redirect:/owner/owner-dashboard";
 		}
 	}
 

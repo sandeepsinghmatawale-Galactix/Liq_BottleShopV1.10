@@ -45,6 +45,6 @@ public class OwnerDashboardController extends BaseBarController {
         model.addAttribute("bar", bar);
         model.addAttribute("recentSessions", sessionService.getRecentSessions(barId, 10));
         
-        return "owner/dashboard";
+        return "owner/owner-dashboard";
     }
 }

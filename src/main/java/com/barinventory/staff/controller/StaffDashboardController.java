@@ -25,52 +25,47 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/staff")
 @RequiredArgsConstructor
 public class StaffDashboardController extends BaseBarController {
-    
-    
-    
-    @GetMapping("/dashboard")
-    public String dashboard(@AuthenticationPrincipal User user, HttpSession httpSession, Model model) {
-        requireStaffRole(httpSession);
-        
-        Long barId = getActiveBarId(httpSession);
-        model.addAttribute("username", user.getName());
-        model.addAttribute("barId", barId);
-        
-        return "staff/dashboard";
-    }
+
+	@GetMapping("/dashboard")
+	public String dashboard(@AuthenticationPrincipal User user, HttpSession httpSession, Model model) {
+		requireStaffRole(httpSession);
+
+		Long barId = getActiveBarId(httpSession);
+		model.addAttribute("username", user.getName());
+		model.addAttribute("barId", barId);
+
+		return "staff/staff-dashboard";
+	}
 }
 
 @Controller
 @RequestMapping("/staff/sessions")
 @RequiredArgsConstructor
 class StaffSessionController extends BaseBarController {
-    
-    private final InventorySessionService sessionService;
-    
-    @GetMapping("/{sessionId}/wells")
-    public String wells(@PathVariable Long sessionId,
-                       HttpSession httpSession,
-                       Model model) {
-        validateSessionAccess(sessionId, httpSession, sessionService);
-        
-        InventorySession session = sessionService.getSession(sessionId);
-        model.addAttribute("session", session);
-        model.addAttribute("wells", sessionService.getWellsByBar(session.getBar().getBarId()));
-        
-        return "staff/sessions/wells";
-    }
-    
-    @PostMapping("/{sessionId}/wells/save")
-    @ResponseBody
-    public ResponseEntity<?> saveWells(@PathVariable Long sessionId,
-                                       @RequestParam Map<String, String> formData,
-                                       HttpSession httpSession) {
-        try {
-            validateSessionAccess(sessionId, httpSession, sessionService);
-            sessionService.saveWellInventoryFromForm(sessionId, formData);
-            return ResponseEntity.ok(Map.of("status", "success"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }
+
+	private final InventorySessionService sessionService;
+
+	@GetMapping("/{sessionId}/wells")
+	public String wells(@PathVariable Long sessionId, HttpSession httpSession, Model model) {
+		validateSessionAccess(sessionId, httpSession, sessionService);
+
+		InventorySession session = sessionService.getSession(sessionId);
+		model.addAttribute("session", session);
+		model.addAttribute("wells", sessionService.getWellsByBar(session.getBar().getBarId()));
+
+		return "sessions/wells";
+	}
+
+	@PostMapping("/{sessionId}/wells/save")
+	@ResponseBody
+	public ResponseEntity<?> saveWells(@PathVariable Long sessionId, @RequestParam Map<String, String> formData,
+			HttpSession httpSession) {
+		try {
+			validateSessionAccess(sessionId, httpSession, sessionService);
+			sessionService.saveWellInventoryFromForm(sessionId, formData);
+			return ResponseEntity.ok(Map.of("status", "success"));
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+		}
+	}
 }
