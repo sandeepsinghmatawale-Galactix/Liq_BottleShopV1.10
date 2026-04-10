@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventory Sessions</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f4f6fb; }
+        .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .session-header { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); border-radius: 15px; padding: 20px; margin-bottom: 25px; }
+        .badge-in-progress { background-color: #ffc107 !important; }
+        .badge-completed { background-color: #28a745 !important; }
+        .badge-rolled-back { background-color: #dc3545 !important; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark shadow-sm">
+    <div class="container-fluid">
+        <span class="navbar-brand fw-bold">
+            <i class="bi bi-box-seam"></i> Inventory Sessions
+        </span>
+        <a th:href="@{/owner/dashboard}" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</nav>
+
+<div class="container mt-4 mb-5">
+
+    <!-- ================= ERROR ALERT ================= -->
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle"></i>
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- ================= SESSION HEADER ================= -->
+    <div th:if="${sessions != null}" class="session-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-1">
+                    <i class="bi bi-shop"></i> 
+                    <span th:text="${bar.barName}"></span>
+                </h4>
+                <p class="text-muted mb-0">Manage inventory sessions for your bar</p>
+            </div>
+            <a th:href="@{/owner/sessions/new}" class="btn btn-success btn-lg">
+                <i class="bi bi-plus-circle"></i> New Session
+            </a>
+        </div>
+    </div>
+
+    <!-- ================= SESSIONS TABLE ================= -->
+    <div th:if="${sessions != null}">
+        
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-list-check"></i> Recent Sessions
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                
+                <div th:if="${sessions.isEmpty()}" class="alert alert-info m-4">
+                    <i class="bi bi-info-circle"></i> No sessions found. Start a new inventory session.
+                </div>
+
+                <table th:unless="${sessions.isEmpty()}" class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th><i class="bi bi-hash"></i> Session ID</th>
+                            <th><i class="bi bi-calendar-event"></i> Started</th>
+                            <th><i class="bi bi-calendar-event"></i> Ended</th>
+                            <th><i class="bi bi-clock"></i> Status</th>
+                            <th><i class="bi bi-gear"></i> Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="inv : ${sessions}">
+                            <!-- Session ID -->
+                            <td>
+                                <span class="badge bg-secondary" th:text="${inv.sessionId}"></span>
+                            </td>
+
+                            <!-- Start Time -->
+                            <td>
+                                <small th:text="${#temporals.format(inv.sessionStartTime, 'dd MMM yyyy, HH:mm')}"></small>
+                            </td>
+
+                            <!-- End Time -->
+                            <td>
+                                <small th:if="${inv.sessionEndTime != null}" 
+                                       th:text="${#temporals.format(inv.sessionEndTime, 'dd MMM yyyy, HH:mm')}"></small>
+                                <small th:unless="${inv.sessionEndTime != null}" class="text-muted">-</small>
+                            </td>
+
+                            <!-- Status Badge -->
+                            <td>
+                                <span class="badge badge-in-progress" 
+                                      th:if="${inv.status.name() == 'IN_PROGRESS'}">
+                                    <i class="bi bi-hourglass-split"></i> In Progress
+                                </span>
+                                <span class="badge badge-completed" 
+                                      th:if="${inv.status.name() == 'COMPLETED'}">
+                                    <i class="bi bi-check-circle"></i> Completed
+                                </span>
+                                <span class="badge badge-rolled-back" 
+                                      th:if="${inv.status.name() == 'ROLLED_BACK'}">
+                                    <i class="bi bi-x-circle"></i> Rolled Back
+                                </span>
+                                <span class="badge bg-secondary" 
+                                      th:if="${inv.status.name() == 'SETUP'}">
+                                    <i class="bi bi-gear"></i> Setup
+                                </span>
+                            </td>
+
+                            <!-- Actions -->
+                            <td>
+                                <!-- Continue IN_PROGRESS -->
+                                <a th:if="${inv.status.name() == 'IN_PROGRESS'}"
+                                   th:href="@{/owner/sessions/{id}/stockroom(id=${inv.sessionId})}"
+                                   class="btn btn-sm btn-primary">
+                                    <i class="bi bi-arrow-right-circle"></i> Continue
+                                </a>
+
+                                <!-- View COMPLETED -->
+                                <a th:if="${inv.status.name() == 'COMPLETED'}"
+                                   th:href="@{/owner/sessions/{id}/stockroom(id=${inv.sessionId})}"
+                                   class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+
+                                <!-- ROLLED_BACK - Disabled -->
+                                <span th:if="${inv.status.name() == 'ROLLED_BACK'}"
+                                      class="text-danger small">
+                                    <i class="bi bi-x-lg"></i> Failed
+                                </span>
+
+                                <!-- SETUP -->
+                                <a th:if="${inv.status.name() == 'SETUP'}"
+                                   th:href="@{/owner/sessions/{id}/stockroom(id=${inv.sessionId})}"
+                                   class="btn btn-sm btn-info">
+                                    <i class="bi bi-arrow-right-circle"></i> Continue
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================= LEGACY BARS LIST (Optional) ================= -->
+    <div th:if="${bars != null}" class="mt-5">
+        <h5 class="mb-3">
+            <i class="bi bi-shop"></i> All Bars
+        </h5>
+        <div class="row">
+            <div class="col-md-6" th:each="bar : ${bars}">
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-title" th:text="${bar.barName}"></h6>
+                        <p class="card-text text-muted small" th:text="${bar.location}"></p>
+                        <a th:href="@{/owner/sessions/list}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-box-seam"></i> Sessions
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Info Footer -->
+<footer class="bg-light py-4 mt-5">
+    <div class="container text-center text-muted small">
+        <p>
+            <i class="bi bi-info-circle"></i>
+            <strong>Session Flow:</strong> New Session → Stockroom → Distribution → Wells → Complete
+        </p>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

@@ -1,6 +1,7 @@
 package com.barinventory.admin.entity;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import com.barinventory.brands.entity.BrandSize;
 import com.fasterxml.jackson.annotation.JsonBackReference;
@@ -31,48 +32,62 @@ import lombok.Setter;
 @Builder
 public class StockroomInventory {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	@ManyToOne(fetch = FetchType.EAGER)
-	@JoinColumn(name = "product_id")
-	private Product product;
-	
-	@ManyToOne(fetch = FetchType.EAGER)
-	@JoinColumn(name = "brand_size_id", nullable = false)
-	private BrandSize brandSize;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "brand_size_id", nullable = false)
+    private BrandSize brandSize;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "bar_id")
-	private Bar bar;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bar_id")
+    private Bar bar;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "session_id")
-	@JsonBackReference
-	private InventorySession session;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "session_id")
+    @JsonBackReference
+    private InventorySession session;
 
-	@Column(nullable = false)
-	private boolean opening = false;
+    @Column(nullable = false)
+    private boolean opening = false;
 
-	@Column(nullable = false, precision = 10, scale = 2)
-	private BigDecimal openingStock = BigDecimal.ZERO; // Previous closing
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal openingStock = BigDecimal.ZERO;
 
-	@Column(nullable = false, precision = 10, scale = 2)
-	private BigDecimal receivedStock = BigDecimal.ZERO; // New deliveries
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal receivedStock = BigDecimal.ZERO;
 
-	@Column(nullable = false, precision = 10, scale = 2)
-	private BigDecimal closingStock = BigDecimal.ZERO; // Physical count
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal closingStock = BigDecimal.ZERO;
 
-	@Column(nullable = false, precision = 10, scale = 2)
-	private BigDecimal transferredOut = BigDecimal.ZERO; // Opening + Received - Closing
+    @Column(name = "transferred_out", nullable = false, precision = 10, scale = 2)
+    private BigDecimal transferredOut = BigDecimal.ZERO;
 
-	@Column(length = 200)
-	private String remarks;
+    @Column(length = 200)
+    private String remarks;
 
-	@PrePersist
-	@PreUpdate
-	public void calculateTransferred() {
-		this.transferredOut = this.openingStock.add(this.receivedStock).subtract(this.closingStock);
-	}
+    @Column(name = "current_stock", nullable = false, precision = 10, scale = 2)
+    private BigDecimal currentStock = BigDecimal.ZERO;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "last_updated", nullable = false)
+    private LocalDateTime lastUpdated;
+
+    @PrePersist
+    @PreUpdate
+    private void syncDerivedFields() {
+        if (openingStock == null) openingStock = BigDecimal.ZERO;
+        if (receivedStock == null) receivedStock = BigDecimal.ZERO;
+        if (closingStock == null) closingStock = BigDecimal.ZERO;
+
+        transferredOut = openingStock.add(receivedStock).subtract(closingStock);
+        currentStock = closingStock;
+
+        LocalDateTime now = LocalDateTime.now();
+        if (createdAt == null) createdAt = now;
+        lastUpdated = now;
+    }
 }
