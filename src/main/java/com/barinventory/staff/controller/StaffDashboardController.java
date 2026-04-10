@@ -26,16 +26,22 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class StaffDashboardController extends BaseBarController {
 
-	@GetMapping("/dashboard")
-	public String dashboard(@AuthenticationPrincipal User user, HttpSession httpSession, Model model) {
-		requireStaffRole(httpSession);
+	 
 
-		Long barId = getActiveBarId(httpSession);
-		model.addAttribute("username", user.getName());
-		model.addAttribute("barId", barId);
+@GetMapping("/dashboard")
+public String dashboard(@AuthenticationPrincipal User user,
+                        HttpSession session,
+                        Model model) {
 
-		return "staff/staff-dashboard";
-	}
+    requireStaff(session);
+
+    Long barId = requireBar(session);
+
+    model.addAttribute("username", user.getName());
+    model.addAttribute("barId", barId);
+
+    return "staff/staff-dashboard";
+}
 }
 
 @Controller

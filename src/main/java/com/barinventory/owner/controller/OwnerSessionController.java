@@ -31,9 +31,8 @@ public class OwnerSessionController extends BaseBarController {
 
 	@GetMapping("/new")
 	public String newSession(@AuthenticationPrincipal User user, HttpSession httpSession, Model model) {
-		requireOwnerRole(httpSession);
-
-		Long barId = getActiveBarId(httpSession);
+		requireOwner(httpSession);
+		Long barId = requireBar(httpSession);
 		InventorySession session = sessionService.createSession(barId);
 
 		return "redirect:/owner/sessions/" + session.getSessionId() + "/stockroom";
@@ -52,7 +51,7 @@ public class OwnerSessionController extends BaseBarController {
 			return "owner/sessions/stockroom";
 		} catch (Exception ex) {
 			redirectAttributes.addFlashAttribute("error", ex.getMessage());
-			return "redirect:/owner/owner-dashboard";
+			return "redirect:/owner/dashboard";
 		}
 	}
 
@@ -85,7 +84,7 @@ public class OwnerSessionController extends BaseBarController {
 			return "owner/sessions/distribution";
 		} catch (Exception ex) {
 			redirectAttributes.addFlashAttribute("error", ex.getMessage());
-			return "redirect:/owner/owner-dashboard";
+			return "redirect:/owner/dashboard";
 		}
 	}
 

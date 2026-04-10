@@ -32,20 +32,7 @@ public class AuthenticationController {
         return "login";
     }
 
-    @GetMapping("/select-bar")
-    public String selectBarPage(@AuthenticationPrincipal User user,
-                               HttpSession session,
-                               Model model) {
-        if (user.getRole() == Role.ADMIN) {
-            return "redirect:/admin/dashboard";
-        }
-
-        List<Bar> bars = barService.getBarsForSelection(user);
-        model.addAttribute("currentUser", user);
-        model.addAttribute("bars", bars);
-        return "select-bar";
-    }
-
+   
     @PostMapping("/select-bar")
     public String selectBar(@AuthenticationPrincipal User user,
                            @RequestParam Long barId,

@@ -36,15 +36,17 @@ public class OwnerDashboardController extends BaseBarController {
     public String dashboard(@AuthenticationPrincipal User user,
                            HttpSession httpSession,
                            Model model) {
-        requireOwnerRole(httpSession);
-        
-        Long barId = getActiveBarId(httpSession);
+
+        requireOwner(httpSession); // ✅ FIXED
+
+        Long barId = requireBar(httpSession); // ✅ ALSO IMPROVE THIS
+
         Bar bar = barRepository.findById(barId).orElseThrow();
-        
+
         model.addAttribute("username", user.getName());
         model.addAttribute("bar", bar);
         model.addAttribute("recentSessions", sessionService.getRecentSessions(barId, 10));
-        
+
         return "owner/owner-dashboard";
     }
 }
